@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import threading
@@ -15,6 +16,7 @@ from report_04.phases import (
     ANALYSIS_STEP_KEYS,
     APIFY_POST_TOOLS,
     IDENTITY_STEP_KEY,
+    INTAKE_STEP_KEY,
     MAIGRET_STEP_KEY,
     MAIGRET_TOOLS,
     OSINT_ES_STEP_KEY,
@@ -29,6 +31,7 @@ from report_04.phases import (
     PROFILE_PARENT_STEP_KEY,
     PROFILE_TOOLS,
     STEP5_STREAM_TOOLS,
+    TOOL_PLATFORM,
     WEB_SEARCH_TOOLS,
     root_step_keys,
 )
@@ -41,6 +44,8 @@ _ADVANCE_LOCK = threading.Lock()
 
 # 各根步骤允许的工具（不含全局跳过的 clarify 等）
 _STEP_WHITELIST: Dict[str, FrozenSet[str]] = {
+    # step0 只允许网页检索补链接；禁止 Maigret（避免 C 判定前后仍扫账号、污染步骤树）
+    INTAKE_STEP_KEY: WEB_SEARCH_TOOLS,
     "step1_seed": frozenset(
         {
             "mcp_twitter_get_user_info",
@@ -100,19 +105,31 @@ _ROOT_ORDER = tuple(root_step_keys())
 def infer_gate_step(task_id: str) -> str:
     """推断当前应处根的步骤（用于白名单）。
 
-    v3：1主账号→2 Maigret→3认定→4公开信息检索→5发文→6八章终稿。
+    v3.1：0输入分析→1主账号→2 Maigret→3认定→4公开信息检索→5发文→6八章终稿。
     """
-    # 仍有 validated 未调发文工具：强制停留发文（即使父节点被误标 completed）
+    # 输入分析未完成：强制停在 step0
     try:
-        from report_04.gates import can_run_step7_collect
-        from report_04.step_reconcile import list_unattempted_post_platforms
+        from report_04.intake import intake_open
 
-        if can_run_step7_collect(task_id) and list_unattempted_post_platforms(task_id):
-            return "step5_posts"
+        if intake_open(task_id):
+            return INTAKE_STEP_KEY
     except Exception:
         pass
 
-    # 仅 step5_posts 父壳终态才进写报（父壳收口已含发文+视频）
+    # 仍有 validated 未调发文工具：强制停留发文（即使父节点被误标 completed）
+    try:
+        from report_04.gates import can_run_step7_collect
+        from report_04.intake import is_person_path
+        from report_04.step_reconcile import list_unattempted_post_platforms
+
+        # C 路径发文已 skip，勿卡在 step5
+        if not is_person_path(task_id):
+            if can_run_step7_collect(task_id) and list_unattempted_post_platforms(task_id):
+                return "step5_posts"
+    except Exception:
+        pass
+
+    # 发文父壳 completed 且可写报 → 进终稿；skipped（C 路径）不得卡死在 step5
     try:
         from report_04.gates import can_advance_to_analysis
 
@@ -120,9 +137,7 @@ def infer_gate_step(task_id: str) -> str:
     except Exception:
         analysis_ok = False
     s7 = get_step_status(task_id, "step5_posts")
-    if s7 in {"completed", "skipped"} or analysis_ok:
-        if not analysis_ok:
-            return "step5_posts"
+    if analysis_ok:
         for key in ANALYSIS_STEP_KEYS:
             st = get_step_status(task_id, key)
             if st in {"pending", "running"}:
@@ -135,7 +150,6 @@ def infer_gate_step(task_id: str) -> str:
         except Exception:
             report_ok = False
         if not report_ok:
-            # 视频/写报门禁未过：有旧专题则停末项，否则停在写报步等视频
             if ANALYSIS_STEP_KEYS:
                 return ANALYSIS_STEP_KEYS[-1]
             return "step7_report"
@@ -143,17 +157,30 @@ def infer_gate_step(task_id: str) -> str:
         if s11 not in {"completed", "skipped"}:
             return "step7_report"
         return "step7_report"
+    if s7 == "completed":
+        # 发文已齐但仍不能写报（常见：等视频）→ 停在发文
+        return "step5_posts"
+    # s7 == skipped：人物无账号路径，继续向下推断 step3/step4
 
     # v3：认定结论已出后——候选主页未齐则仍停 profiles（放行 Apify）；齐了再进网页备料
     try:
         from report_04.gates import (
+            discovery_steps_terminal,
             identity_step_terminal,
             is_v3_report_tree,
             osint_web_status,
             step3_profiles_terminal,
         )
 
-        if is_v3_report_tree(task_id) and identity_step_terminal(task_id):
+        if is_v3_report_tree(task_id):
+            # 必须先尊重步骤1/2；认定兜底只处理「前置均终态但 3.1 被误跳过」。
+            if get_step_status(task_id, "step1_seed") not in {"completed", "skipped"}:
+                return "step1_seed"
+            if not discovery_steps_terminal(task_id):
+                return MAIGRET_STEP_KEY
+            # skipped/failed 不能冒充认定完成；活动任务必须回到 3.1 等真实结论。
+            if not identity_step_terminal(task_id):
+                return IDENTITY_STEP_KEY
             if not step3_profiles_terminal(task_id):
                 return PROFILE_PARENT_STEP_KEY
             s_web = osint_web_status(task_id)
@@ -213,11 +240,39 @@ def block_tool_reason(
     if _allow_late_step5_post_collect(task_id, tool_name, phase):
         return None
 
-    # Maigret：认定/网页已开或步骤2已终态 → 硬拦，防止思考流写完认定结论后又回流扫账号
+    # 写报采集全程禁止 terminal：必须走 MCP/Apify，禁止 curl/shell 旁路
+    if tool_name == "terminal":
+        gate = infer_gate_step(task_id)
+        tip = {
+            "step0_intake": "请用 web_search/web_extract；找到链接后输出 [输入分析结论]。",
+            "step1_seed": (
+                "请调用主页 MCP/Apify："
+                "LinkedIn→mcp_apify_harvestapi__linkedin_profile_scraper→"
+                "get_actor_run→get_dataset_items。"
+            ),
+            "step2_maigret": "请调用 mcp_maigret_collect_accounts。",
+            "step3_identity": "请输出认定结论；候选主页用 MCP/Apify，禁止 shell。",
+            "step4_osint_web": "请用 web_search/web_extract/browser_*。",
+            "step5_posts": "请调用发文类 MCP/Apify 工具。",
+        }.get(gate, "请按当前步骤白名单调用 MCP/Apify，禁止 terminal/curl。")
+        return f"写报编排禁止调用 terminal（当前 {gate}）。{tip}"
+
+    # Maigret：仅步骤2；step0 / 认定后 / 已 skip 一律禁止
     if tool_name.startswith("mcp_maigret_"):
         try:
+            from report_04.intake import intake_open, is_person_path
             from report_04.gates import identity_step_terminal
 
+            if intake_open(task_id):
+                return (
+                    "步骤0输入分析禁止调用 Maigret。"
+                    "请用 web_search 查找社交主页链接；找到则 outcome=B 回填后进入步骤1/2。"
+                )
+            if is_person_path(task_id):
+                return (
+                    "当前为人物网页报告路径（无社交种子），禁止调用 Maigret。"
+                    "请输出 [人物锚定结论] 后进入步骤4 web_search 备料。"
+                )
             if identity_step_terminal(task_id):
                 return (
                     "账号认定已完成，禁止再调用 Maigret。"
@@ -257,6 +312,48 @@ def block_tool_reason(
         pass
     # [COLLISION_DEMO_FAKE] end
     allowed = _STEP_WHITELIST.get(gate, frozenset())
+
+    # 步骤3候选主页只采 Maigret 新发现的账号；种子主页已在步骤1入库，禁止重复扣费采集。
+    if gate in {IDENTITY_STEP_KEY, "step4_identity", PROFILE_PARENT_STEP_KEY}:
+        platform = str(TOOL_PLATFORM.get(tool_name) or "").strip().lower()
+        if platform and tool_name in PROFILE_TOOLS:
+            try:
+                task = db.fetch_one(
+                    "SELECT seed_json FROM hermes_tasks WHERE task_id=%s",
+                    (task_id,),
+                )
+                seed = json.loads((task or {}).get("seed_json") or "{}")
+                seed_platform = str(seed.get("platform") or "").strip().lower()
+                row = db.fetch_one(
+                    """
+                    SELECT COUNT(*) AS c FROM collect_profiles
+                    WHERE task_id=%s AND platform=%s
+                    """,
+                    (task_id, platform),
+                )
+                if (
+                    platform == seed_platform
+                    and get_step_status(task_id, "step1_seed") == "completed"
+                    and int((row or {}).get("c") or 0) > 0
+                ):
+                    return (
+                        f"{platform} 种子主页已在步骤1采集入库，禁止在步骤3重复调用 {tool_name}。"
+                        "请仅采 Maigret 新候选；若无候选，直接输出 [账号认定结论]。"
+                    )
+                child_key = f"step3_profile_{platform}"
+                child_status = get_step_status(task_id, child_key)
+                if child_status is None:
+                    return (
+                        f"Maigret 未产生 {platform} 可采候选，禁止调用 {tool_name}。"
+                        "请处理已有候选；若没有候选，输出 [账号认定结论]。"
+                    )
+                if child_status in {"completed", "skipped", "failed"}:
+                    return (
+                        f"{child_key} 已终态({child_status})，禁止重复调用 {tool_name}。"
+                        "请继续其它候选或输出 [账号认定结论]。"
+                    )
+            except Exception as exc:
+                logger.warning("种子主页重复采集检查失败 task=%s: %s", task_id, exc)
 
     # 社工库工具：仅 4.3；名称可能含 sanitize 后的 es_search
     if is_osint_es_tool(tool_name):

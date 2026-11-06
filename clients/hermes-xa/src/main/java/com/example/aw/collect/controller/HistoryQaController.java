@@ -56,15 +56,14 @@ public class HistoryQaController {
      * <b>请求示例：</b>
      * <pre>
      * GET /api/history/tasks?page=1&amp;pageSize=20
-     * GET /api/history/tasks?taskType=collect&amp;status=completed
+     * GET /api/history/tasks?taskType=report&amp;status=completed
      * </pre>
      * <p>
      * <b>查询参数说明：</b>
      * <ul>
      *   <li>{@code page} —— 页码，从 1 开始，非法值由 Service 纠正为 1</li>
      *   <li>{@code pageSize} —— 每页条数，默认 20，Service 内上限 200</li>
-     *   <li>{@code taskType} —— 可选业务类型筛选：
-     *       前端短码 collect/expand/verify/report，或库内 account_collect 等</li>
+     *   <li>{@code taskType} —— 可选；hq 仅支持 {@code report}/{@code profile}/{@code account_report}</li>
      *   <li>{@code status} —— 可选再筛单一状态：pending / running / completed / cancelled / failed；
      *       不传则上述状态都返回。failed 的 statusLabel 为「失败」</li>
      * </ul>

@@ -393,12 +393,15 @@ public class TaskTreeQueryService {
     /** 3.账号认定：开始 → 认定中 → 完成 */
     private StageProgress stageCollision(Map<String, Object> shell, String shellStatus) {
         List<String> stages = Arrays.asList("开始", "认定中", "完成");
-        if (isTerminalStatus(shellStatus)) {
-            return new StageProgress(stages, 2);
-        }
         String sId = findDescendantStatus(shell, "step3_identity");
+        boolean v3Identity = !sId.isEmpty();
         if (sId.isEmpty()) {
             sId = findDescendantStatus(shell, "step4_identity");
+        }
+        // v3 壳终态不能掩盖 step3_identity=skipped/failed；只有真实 completed 才显示完成。
+        if ("completed".equals(sId)
+                || (!v3Identity && isTerminalStatus(shellStatus) && isTerminalStatus(sId))) {
+            return new StageProgress(stages, 2);
         }
         if (isActiveStatus(sId) || isActiveStatus(shellStatus)
                 || hasActiveDescendant(shell)

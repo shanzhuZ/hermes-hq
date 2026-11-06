@@ -21,8 +21,20 @@ _IMAGE_JOB_LOCK = threading.Lock()
 _IMAGE_JOBS: Dict[str, bool] = {}
 
 
+def _is_v3_report(task_id: str) -> bool:
+    """v3 六步树没有旧版文本流/图片流核验节点。"""
+    try:
+        from report_04.gates import is_v3_report_tree
+
+        return bool(is_v3_report_tree(task_id))
+    except Exception:
+        return False
+
+
 def ensure_stream_child_steps(store: Any, task_id: str) -> None:
     """确保 4.1.1 / 4.1.2 存在（旧任务兼容）。"""
+    if _is_v3_report(task_id):
+        return
     store.ensure_step_row(task_id, STREAM_PARENT_STEP_KEY)
     store.ensure_step_row(task_id, STREAM_TEXT_STEP_KEY)
     store.ensure_step_row(task_id, STREAM_IMAGE_STEP_KEY)
@@ -30,6 +42,10 @@ def ensure_stream_child_steps(store: Any, task_id: str) -> None:
 
 def rollup_step5_parent(store: Any, task_id: str) -> bool:
     """两子都终态 → 父壳 completed，并尝试进步骤6。"""
+    if _is_v3_report(task_id):
+        # v3 的 step3_identity 只由 [账号认定结论]/[人物锚定结论] 收口，
+        # 严禁旧图片流逻辑改写其状态。
+        return get_step_status(task_id, "step3_identity") == "completed"
     ensure_stream_child_steps(store, task_id)
     t = get_step_status(task_id, STREAM_TEXT_STEP_KEY)
     i = get_step_status(task_id, STREAM_IMAGE_STEP_KEY)
@@ -63,8 +79,15 @@ def parse_text_conclusion(assistant: str) -> Optional[str]:
     text = (assistant or "").strip()
     if not text:
         return None
+    try:
+        from report_04.phases import PERSON_ANCHOR_CONCLUSION_MARKER
+    except Exception:
+        PERSON_ANCHOR_CONCLUSION_MARKER = "[人物锚定结论]"
     marker = STREAM_TEXT_CONCLUSION_MARKER
     idx = text.find(marker)
+    if idx < 0:
+        marker = PERSON_ANCHOR_CONCLUSION_MARKER
+        idx = text.find(marker)
     if idx < 0:
         return None
     body = text[idx + len(marker) :].strip()
@@ -75,9 +98,76 @@ def parse_text_conclusion(assistant: str) -> Optional[str]:
 
 def apply_text_conclusion_from_assistant(store: Any, task_id: str, assistant: str) -> bool:
     """解析 [账号认定结论] → 收口 step3_identity（并兜底关闭仍卡着的 Maigret）。"""
+    try:
+        from report_04.intake import intake_open
+
+        if intake_open(task_id):
+            return False
+    except Exception:
+        pass
     conclusion = parse_text_conclusion(assistant)
     if not conclusion:
         return False
+    if _is_v3_report(task_id):
+        from report_04.gates import discovery_steps_terminal, step3_profiles_terminal
+        from report_04.intake import is_person_path
+        from report_04.phases import IDENTITY_STEP_KEY, PROFILE_PARENT_STEP_KEY
+
+        # v3 必须按真实依赖推进：Maigret → 候选主页佐证 → 账号认定结论。
+        # 思考流可以提前出现结论，但在前置未收口前只保留原事件，不抢写 completed。
+        if not discovery_steps_terminal(task_id):
+            return False
+        if not is_person_path(task_id):
+            low_conclusion = conclusion.lower()
+            if (
+                "validated_accounts" not in low_conclusion
+                or "excluded_accounts" not in low_conclusion
+            ):
+                cur = get_step_status(task_id, IDENTITY_STEP_KEY)
+                if cur in {None, "pending"}:
+                    store.set_step_status(
+                        task_id,
+                        IDENTITY_STEP_KEY,
+                        "running",
+                        message="等待结构化账号认定结论（validated_accounts / excluded_accounts）",
+                    )
+                return False
+            try:
+                store.materialize_step4_from_candidates(task_id)
+            except Exception as exc:
+                logger.warning("v3 认定前物化候选主页失败 task=%s: %s", task_id, exc)
+            if not step3_profiles_terminal(task_id):
+                cur = get_step_status(task_id, IDENTITY_STEP_KEY)
+                if cur in {None, "pending"}:
+                    store.set_step_status(
+                        task_id,
+                        IDENTITY_STEP_KEY,
+                        "running",
+                        message="账号认定中，等待候选主页佐证收口",
+                        payload={"pending_conclusion": conclusion, "source": "agent_marker"},
+                    )
+                return False
+        elif get_step_status(task_id, PROFILE_PARENT_STEP_KEY) not in {
+            "completed",
+            "skipped",
+        }:
+            return False
+
+        # 即使曾被旧图片管线错误标 skipped，也应由真实认定结论修复为 completed。
+        store.set_step_status(
+            task_id,
+            IDENTITY_STEP_KEY,
+            "completed",
+            message="账号认定结论已入库",
+            payload={"conclusion": conclusion, "source": "agent_marker"},
+            touch_updated_at=get_step_status(task_id, IDENTITY_STEP_KEY) != "completed",
+        )
+        try:
+            store.run_validated_accounts(task_id)
+        except Exception as exc:
+            logger.warning("v3 认定后写可信清单失败 task=%s: %s", task_id, exc)
+        return True
+
     # v3：认定结论以 Maigret 有结果为准；候选主页是可选佐证，不再挡收口
     try:
         from report_04.gates import discovery_steps_terminal
@@ -157,6 +247,9 @@ def apply_text_conclusion_from_assistant(store: Any, task_id: str, assistant: st
 
 def start_step5_image_pipeline(store: Any, task_id: str) -> None:
     """进入核验后后台跑 image_pipeline，完成后收口 4.1.2。"""
+    if _is_v3_report(task_id):
+        logger.info("跳过旧图片核验管线（v3 六步树） task=%s", task_id)
+        return
     ensure_stream_child_steps(store, task_id)
     cur = get_step_status(task_id, STREAM_IMAGE_STEP_KEY)
     if cur in _TERMINAL:

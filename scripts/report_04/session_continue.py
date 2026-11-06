@@ -385,7 +385,7 @@ def chain_continue_after_worker(
     if prev == next_kind and prev != "hold":
         if not (prev == "analysis" and _analysis_still_open(task_id)):
             return False
-    if next_kind not in {"posts", "analysis", "hold"}:
+    if next_kind not in {"collect", "posts", "analysis", "hold"}:
         return False
     return maybe_continue_agent_session(
         store,
@@ -586,6 +586,8 @@ def _action_for_continue_kind(kind: str) -> AgentAction:
     k = str(kind or "").strip().lower()
     if k == "analysis":
         return "write"
+    if k == "collect":
+        return "call"
     if k == "posts":
         return "call"
     if k == "hold":
@@ -594,7 +596,7 @@ def _action_for_continue_kind(kind: str) -> AgentAction:
 
 
 def _action_to_continue_kind(action: AgentAction, task_id: str) -> Optional[str]:
-    """续跑 worker 仍用 hold/posts/analysis 三 kind；由 action 映射。"""
+    """续跑 worker 使用 collect/hold/posts/analysis；由当前动作映射。"""
     if action == "done":
         return None
     if action == "write":
@@ -604,7 +606,7 @@ def _action_to_continue_kind(action: AgentAction, task_id: str) -> Optional[str]
     # call
     if _can_run_step7(task_id):
         return "posts"
-    return "hold"
+    return "collect"
 
 
 def _can_run_step7(task_id: str) -> bool:
@@ -688,18 +690,19 @@ def build_next_action_hint(task_id: str) -> str:
 
 
 def infer_continue_kind(task_id: str) -> Optional[str]:
-    """hold | posts | analysis；已完成则 None。内部转调 next_agent_action。"""
+    """collect | hold | posts | analysis；已完成则 None。"""
     return _action_to_continue_kind(next_agent_action(task_id), task_id)
 
 
 def build_continue_message(kind: str, task_id: str) -> str:
     action = _action_for_continue_kind(kind)
-    if action == "call" and kind == "hold":
-        # 步骤七未开放时的 call（发现/主页）
+    if kind == "collect":
+        # 步骤5发文尚未开放时的 call（种子/Maigret/候选主页/认定/网页）
         hint = build_next_action_hint(task_id)
         msg = (
-            "【系统续跑·禁止结束会话】下一步须调采集工具（Maigret / 网页检索 / 主页 Apify 等）。"
-            "禁止写「等待系统/会话保持」并结束。"
+            "【系统续跑·禁止结束会话】前半段流程尚未收口。"
+            "请严格按当前 gate 完成种子主页、Maigret、候选主页、结构化账号认定或网页备料；"
+            "禁止跳步，禁止写「等待系统/会话保持」并结束。"
         )
         if hint:
             msg += "\n" + hint
@@ -1392,20 +1395,21 @@ def maybe_continue_agent_session(
         use_kind = expected_kind
     elif kind and expected_kind and _action_for_continue_kind(kind) != target_action:
         use_kind = expected_kind
-    # 8～10 已齐但发文/视频未终态：不催写报，等 video_runner 终态后再续
-    try:
-        from report_04.gates import analysis_steps_terminal
-        from report_04.video_report import can_write_report_after_videos
+    # 只有准备写终稿时才等发文/视频；collect/posts 续跑不得被此门禁误挡。
+    if target_action == "write":
+        try:
+            from report_04.gates import analysis_steps_terminal
+            from report_04.video_report import can_write_report_after_videos
 
-        if analysis_steps_terminal(task_id) and not can_write_report_after_videos(task_id).get("ok"):
-            logger.info(
-                "flow continue 等待视频/发文终态 task=%s reason=%s",
-                task_id,
-                reason,
-            )
-            return False
-    except Exception:
-        pass
+            if analysis_steps_terminal(task_id) and not can_write_report_after_videos(task_id).get("ok"):
+                logger.info(
+                    "flow continue 等待视频/发文终态 task=%s reason=%s",
+                    task_id,
+                    reason,
+                )
+                return False
+        except Exception:
+            pass
 
     skip = _should_skip_continue(
         task_id, reason=str(reason or ""), kind=use_kind, force=force

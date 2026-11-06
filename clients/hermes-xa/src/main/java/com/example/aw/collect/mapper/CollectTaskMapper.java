@@ -16,6 +16,8 @@ public interface CollectTaskMapper {
 
     Map<String, Object> selectActiveTaskBySessionId(@Param("sessionId") String sessionId);
 
+    List<Map<String, Object>> selectTasksBySessionId(@Param("sessionId") String sessionId);
+
     void insertTask(@Param("taskId") String taskId,
                     @Param("sessionId") String sessionId,
                     @Param("taskType") String taskType,
@@ -26,6 +28,15 @@ public interface CollectTaskMapper {
                             @Param("sessionId") String sessionId,
                             @Param("content") String content,
                             @Param("payloadJson") String payloadJson);
+
+    long countAllDialogues(@Param("dbTaskType") String dbTaskType);
+
+    List<Map<String, Object>> selectDialoguesPage(@Param("offset") int offset,
+                                                  @Param("limit") int limit,
+                                                  @Param("dbTaskType") String dbTaskType);
+
+    /** 按任务类型统计对话历史条数。 */
+    List<Map<String, Object>> countDialoguesGroupByTaskType();
 
     void insertPhaseStep(@Param("taskId") String taskId,
                          @Param("stepKey") String stepKey,

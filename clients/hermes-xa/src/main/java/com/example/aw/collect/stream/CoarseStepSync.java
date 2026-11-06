@@ -139,6 +139,17 @@ public class CoarseStepSync {
             return stepKey;
         }
         String platform = CoarseToolStepMapping.platformOfTool(toolName);
+        // 输入分析未完成：web / maigret 粗同步挂到 step0，避免误点亮 step4 / step2
+        String step0 = collectTaskMapper.selectStepStatus(taskId, "step0_intake");
+        boolean step0Open = step0 != null
+                && !step0.isEmpty()
+                && ("pending".equals(step0) || "running".equals(step0));
+        if (step0Open && ("step4_osint_web".equals(stepKey)
+                || "step2_osint_web".equals(stepKey)
+                || "step2_maigret".equals(stepKey))) {
+            return "step0_intake";
+        }
+
         String step1 = collectTaskMapper.selectStepStatus(taskId, "step1_seed");
         boolean step1Open = step1 == null
                 || step1.isEmpty()
@@ -208,14 +219,23 @@ public class CoarseStepSync {
         if (!"account_report".equals(taskType) || stepKey == null) {
             return false;
         }
-        if (!"step4_osint_web".equals(stepKey) && !"step2_osint_web".equals(stepKey)) {
+        if (!"step4_osint_web".equals(stepKey) && !"step2_osint_web".equals(stepKey)
+                && !"step0_intake".equals(stepKey)) {
+            return false;
+        }
+        // step0 期间允许粗点亮（web 已 remap 到 step0）
+        if ("step0_intake".equals(stepKey)) {
             return false;
         }
         String sId = collectTaskMapper.selectStepStatus(taskId, "step3_identity");
-        if (sId == null || sId.isEmpty()) {
+        boolean v3Identity = sId != null && !sId.isEmpty();
+        if (!v3Identity) {
             sId = collectTaskMapper.selectStepStatus(taskId, "step4_identity");
         }
-        return !"completed".equals(sId) && !"skipped".equals(sId);
+        // v3 必须有真实账号认定结论；skipped 不能放行公开信息检索。
+        return v3Identity
+                ? !"completed".equals(sId)
+                : (!"completed".equals(sId) && !"skipped".equals(sId));
     }
 
     /**
@@ -230,10 +250,12 @@ public class CoarseStepSync {
             return false;
         }
         String sId = collectTaskMapper.selectStepStatus(taskId, "step3_identity");
-        if (sId == null || sId.isEmpty()) {
+        boolean v3Identity = sId != null && !sId.isEmpty();
+        if (!v3Identity) {
             sId = collectTaskMapper.selectStepStatus(taskId, "step4_identity");
         }
-        if (!"completed".equals(sId) && !"skipped".equals(sId)) {
+        if (v3Identity ? !"completed".equals(sId)
+                : (!"completed".equals(sId) && !"skipped".equals(sId))) {
             return true;
         }
         String sWeb = collectTaskMapper.selectStepStatus(taskId, "step4_osint_web");

@@ -13,14 +13,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 04 公开资料核查写报（hermes-hq）— 预建任务：step_plan + 六大阶段壳 + 业务子步。
+ * 04 公开资料核查写报（hermes-hq）— 预建任务：step_plan + intake + 六大阶段壳 + 业务子步。
  * <p>
- * v3：主账号 → Maigret → 账号认定 → 公开信息检索 → 全账号发文 → 八章报告。
+ * v3：输入分析 → 主账号 → Maigret → 账号认定 → 公开信息检索 → 全账号发文 → 八章报告。
  */
 @Service
 public class ReportTaskCreateService implements TaskCreateService {
 
     public static final String STEP_PLAN = "step_plan";
+    public static final String PHASE_INTAKE = "phase_intake";
     public static final String PHASE_LOCK_TARGET = "phase_lock_target";
     public static final String PHASE_DISCOVERY = "phase_discovery";
     public static final String PHASE_IDENTITY = "phase_identity";
@@ -33,6 +34,7 @@ public class ReportTaskCreateService implements TaskCreateService {
     /** @deprecated 方案 A 专题壳，已移除 */
     public static final String PHASE_ANALYSIS = "phase_analysis";
     public static final String PHASE_REPORT = "phase_report";
+    public static final String STEP_INTAKE = "step0_intake";
 
     @Autowired
     private CollectTaskMapper collectTaskMapper;
@@ -80,9 +82,7 @@ public class ReportTaskCreateService implements TaskCreateService {
 
     private boolean isReportIntent(String message) {
         Pattern p = Pattern.compile(
-                "(account-intelligence-report|account-intelligence-profile|画像写报|写报.*?"
-                        + "(推特|twitter|微博|weibo|youtube|bilibili|"
-                        + "instagram|tiktok|telegram|facebook|github|linkedin|@))",
+                "(account-intelligence-report|account-intelligence-profile|画像写报|公开资料核查|写报)",
                 Pattern.CASE_INSENSITIVE);
         return p.matcher(message).find();
     }
@@ -119,7 +119,8 @@ public class ReportTaskCreateService implements TaskCreateService {
             }
         }
         Matcher hm = Pattern.compile("@([A-Za-z0-9_\\.]+)").matcher(text);
-        if (hm.find()) {
+        boolean hasHandle = hm.find();
+        if (hasHandle) {
             seed.put("account_handle", hm.group(1));
             seed.put("account_hint", hm.group(1));
         } else {
@@ -128,6 +129,32 @@ public class ReportTaskCreateService implements TaskCreateService {
                 hint = hint.substring(0, 128);
             }
             seed.put("account_hint", hint);
+        }
+        Matcher urlm = Pattern.compile(
+                "(https?://(?:www\\.)?(?:twitter\\.com|x\\.com|weibo\\.com|youtube\\.com|youtu\\.be|"
+                        + "instagram\\.com|tiktok\\.com|t\\.me|facebook\\.com|fb\\.com|"
+                        + "github\\.com|linkedin\\.com|bilibili\\.com)[^\\s]*)",
+                Pattern.CASE_INSENSITIVE).matcher(text);
+        boolean hasUrl = urlm.find();
+        if (hasUrl) {
+            seed.put("profile_url", urlm.group(1));
+        }
+        boolean hasSocial = hasHandle || hasUrl;
+        seed.put("has_social_hint", Boolean.valueOf(hasSocial));
+        seed.put("seed_mode", hasSocial ? "account" : "person");
+        seed.put("intake_outcome", hasSocial ? "A" : "pending");
+        // 粗提姓名/职位（无社交时给 step0 用；有社交也不伤）
+        Matcher namem = Pattern.compile(
+                "(?:姓名|name)\\s*[:：]\\s*(.+)$", Pattern.CASE_INSENSITIVE | Pattern.MULTILINE)
+                .matcher(text);
+        if (namem.find()) {
+            seed.put("person_name", namem.group(1).trim());
+        }
+        Matcher jobm = Pattern.compile(
+                "(?:职位|职务|title|position)\\s*[:：]\\s*(.+)$",
+                Pattern.CASE_INSENSITIVE | Pattern.MULTILINE).matcher(text);
+        if (jobm.find()) {
+            seed.put("job_title", jobm.group(1).trim());
         }
         seed.put("parse_status", "pending");
         return seed;
@@ -145,9 +172,11 @@ public class ReportTaskCreateService implements TaskCreateService {
     }
 
     private void insertReportSteps(String taskId, String seedPlatform) {
-        collectTaskMapper.insertPhaseStep(taskId, STEP_PLAN, null, 5, "0", "制定执行计划",
+        collectTaskMapper.insertPhaseStep(taskId, STEP_PLAN, null, 5, "P", "制定执行计划",
                 SourceTag.jsonForStep(STEP_PLAN));
 
+        collectTaskMapper.insertPhaseStep(taskId, PHASE_INTAKE, STEP_PLAN, 50, "0", "0. 输入分析",
+                SourceTag.jsonForStep(PHASE_INTAKE));
         collectTaskMapper.insertPhaseStep(taskId, PHASE_LOCK_TARGET, STEP_PLAN, 100, "1", "1. 主账号采集",
                 SourceTag.jsonForStep(PHASE_LOCK_TARGET));
         collectTaskMapper.insertPhaseStep(taskId, PHASE_DISCOVERY, STEP_PLAN, 200, "2", "2. Maigret 跨平台检索",
@@ -162,6 +191,9 @@ public class ReportTaskCreateService implements TaskCreateService {
                 SourceTag.jsonForStep(PHASE_REPORT));
 
         collectTaskMapper.insertPhaseStep(
+                taskId, STEP_INTAKE, PHASE_INTAKE, 55, "0.1",
+                "输入分析 Agent（分流 A/B/C）", SourceTag.jsonForStep(STEP_INTAKE));
+        collectTaskMapper.insertPhaseStep(
                 taskId, "step1_seed", PHASE_LOCK_TARGET, 110, "1.1",
                 seedAgentTitle(seedPlatform), SourceTag.jsonForStep("step1_seed", seedPlatform));
         collectTaskMapper.insertPhaseStep(
@@ -172,7 +204,7 @@ public class ReportTaskCreateService implements TaskCreateService {
                 "账号认定 Agent", SourceTag.jsonForStep("step3_identity"));
         collectTaskMapper.insertPhaseStep(
                 taskId, "step3_profiles", PHASE_IDENTITY, 320, "3.2",
-                "候选主页采集（认定佐证）", SourceTag.jsonForStep("step3_profiles"));
+                "候选主页采集（可选认定佐证）", SourceTag.jsonForStep("step3_profiles"));
         collectTaskMapper.insertPhaseStep(
                 taskId, "step4_osint_web", PHASE_WEB_INTEL, 410, "4.1",
                 "网页检索 Agent 公开信息备料", SourceTag.jsonForStep("step4_osint_web"));

@@ -52,8 +52,9 @@ def snapshot(task_id: str) -> Dict[str, Any]:
 
 
 def format_system_progress_board(task_id: str) -> str:
-    """每轮注入：进度 + 下一步（v3 六步）。"""
+    """每轮注入：进度 + 下一步（v3.1：intake + 六步）。"""
     gate = infer_gate_step(task_id)
+    s0 = get_step_status(task_id, "step0_intake") or "n/a"
     s1 = get_step_status(task_id, "step1_seed") or "pending"
     s2 = get_step_status(task_id, "step2_maigret") or "pending"
     s3 = get_step_status(task_id, "step3_identity") or get_step_status(
@@ -66,6 +67,17 @@ def format_system_progress_board(task_id: str) -> str:
     s7 = get_step_status(task_id, "step5_posts") or "pending"
     s11 = get_step_status(task_id, "step7_report") or "pending"
 
+    if gate == "step0_intake":
+        return "\n".join(
+            [
+                "【系统进度·输入分析】",
+                f"- 步骤0 输入分析 step0_intake: {s0}",
+                "【当前编排】step0_intake",
+                "【下一步】分析用户输入；有社交→A，搜到链接→B 回填，确认无社交→C；"
+                "必须输出 [输入分析结论]；缺链接可用有限次 web_search。",
+            ]
+        )
+
     early_gates = {
         "step1_seed",
         "step2_maigret",
@@ -76,6 +88,7 @@ def format_system_progress_board(task_id: str) -> str:
     if gate in early_gates and s4 not in {"running", "completed", "skipped"}:
         lines = [
             "【系统进度·前半段】",
+            f"- 步骤0 输入分析 step0_intake: {s0}",
             f"- 步骤1 主账号 step1_seed: {s1}",
             f"- 步骤2 Maigret step2_maigret: {s2}",
             f"- 步骤3 认定 step3_identity: {s3}（候选主页 {s3p}）",
@@ -89,7 +102,11 @@ def format_system_progress_board(task_id: str) -> str:
                 "【下一步】只调 mcp_maigret_collect_accounts；禁止用 web_search 找账号。"
             ),
             "step3_identity": (
-                "【下一步】输出 [账号认定结论]；必要时采候选主页佐证；禁止 web_search 扩账号。"
+                (
+                    "【下一步】先完成 3.2 候选主页佐证，暂勿输出最终认定结论。"
+                    if s3p in {"pending", "running"}
+                    else "【下一步】A/B 输出 [账号认定结论]；C 输出 [人物锚定结论]。"
+                )
             ),
             "step4_identity": (
                 "【下一步】输出 [账号认定结论]；必要时采候选主页佐证；禁止 web_search 扩账号。"
@@ -170,31 +187,77 @@ def format_system_progress_board(task_id: str) -> str:
 
 
 def _build_agent_context_v3(task_id: str, gate: str) -> str:
-    """v3 六步专用：禁止再注入旧 4.1/4.3/步骤8～10 写报路径。"""
+    """v3.1：intake + 六步；禁止再注入旧 4.1/4.3/步骤8～10 写报路径。"""
     lines: List[str] = [
         format_system_progress_board(task_id),
         f"【04引擎 {ENGINE_VERSION}·v3】当前编排步骤：{gate}",
     ]
-    if gate == "step1_seed":
-        lines.append("步骤1：只采主账号主页；禁止 Maigret/web_search/发文/写八章。")
+    if gate == "step0_intake":
+        lines.append(
+            "步骤0：分析用户输入并输出 [输入分析结论]（outcome: A/B/C）。"
+            "A=已有社交；B=搜到链接并回填 platform/handle；C=确认无社交。"
+            "B 禁止只凭同名，reason 至少写两项独立一致锚点并说明无关键冲突。"
+            "只用 web_search/web_extract 找个人社交主页；禁止 Maigret；禁止写八章、禁止发文。"
+        )
+    elif gate == "step1_seed":
+        lines.append(
+            "步骤1：只采主账号主页（必须 MCP/Apify，禁止 terminal/curl）；"
+            "LinkedIn→mcp_apify_harvestapi__linkedin_profile_scraper→get_actor_run→get_dataset_items；"
+            "步骤1完成前严禁并行启动步骤2；禁止 Maigret/web_search/发文/写八章。"
+        )
     elif gate == "step2_maigret":
         lines.append(
             "步骤2：只调 mcp_maigret_collect_accounts；禁止用 web_search 找账号。"
         )
     elif gate in {"step3_identity", "step4_identity"}:
-        lines.append(
-            "步骤3：输出 [账号认定结论]；必要时采候选主页佐证；"
-            "禁止 web_search 扩账号、禁止发文、禁止写八章。"
-        )
+        try:
+            from report_04.intake import is_person_path
+
+            if is_person_path(task_id):
+                lines.append(
+                    "步骤3（C路径）：输出 [人物锚定结论]（姓名/职位/机构消歧）；"
+                    "写明未见可靠社交账号；禁止编造 handle；禁止发文、禁止写八章。"
+                )
+            elif get_step_status(task_id, "step3_profiles") in {"pending", "running"}:
+                lines.append(
+                    "步骤3：账号认定已开始；先对 Maigret 新候选采主页佐证。"
+                    "候选主页父/子节点终态后再输出 [账号认定结论]；"
+                    "禁止重复采种子主页、禁止 web_search 扩账号、禁止发文。"
+                )
+            else:
+                lines.append(
+                    "步骤3：候选主页佐证已收口，现在输出 [账号认定结论]；"
+                    "必须分行列出 validated_accounts 与 excluded_accounts（platform|handle|profile_url|依据）；"
+                    "禁止 web_search 扩账号、禁止发文、禁止写八章。"
+                )
+        except Exception:
+            lines.append(
+                "步骤3：输出 [账号认定结论]；必要时采候选主页佐证；"
+                "禁止 web_search 扩账号、禁止发文、禁止写八章。"
+            )
     elif gate == "step3_profiles":
         lines.append(
             "步骤3辅：对已纳入认定的候选调主页工具；禁止再采种子平台；禁止发文。"
         )
     elif gate in {"step4_osint_web", "step2_osint_web"}:
-        lines.append(
-            "步骤4：仅用 web_search/web_extract 为八章备料；"
-            "禁止再搜社交账号；禁止发文；禁止写八章终稿。"
-        )
+        try:
+            from report_04.intake import is_person_path
+
+            if is_person_path(task_id):
+                lines.append(
+                    "步骤4（C路径·主产能）：加大 web_search/web_extract，"
+                    "按八章模板深挖官网/新闻/机构页；禁止编造社交账号；禁止发文；禁止写八章终稿。"
+                )
+            else:
+                lines.append(
+                    "步骤4：仅用 web_search/web_extract 为八章备料；"
+                    "禁止再搜社交账号；禁止发文；禁止写八章终稿。"
+                )
+        except Exception:
+            lines.append(
+                "步骤4：仅用 web_search/web_extract 为八章备料；"
+                "禁止再搜社交账号；禁止发文；禁止写八章终稿。"
+            )
     elif gate == "step5_posts":
         lines.append(
             "步骤5：对已认定账号调用发文工具；禁止提前写八章；"
@@ -241,6 +304,7 @@ def _build_agent_context_v3(task_id: str, gate: str) -> str:
             lines.append(
                 "步骤6：一次输出八章公开资料核查报告（见 Skill 骨架）。"
                 "必须以文首标题或「一、基本情况」起笔；勿在第一节前写进度/管线句。"
+                "必须完整保留 Skill 骨架的固定章节与二级项；无资料写未核实，禁止删项或合并。"
                 "禁止再拆步骤8/9/10 旧专题。"
             )
     else:
@@ -548,6 +612,7 @@ def build_agent_context(task_id: str) -> Optional[str]:
             lines.append(
                 "步骤6：一次输出八章公开资料核查报告（见 Skill 骨架）。"
                 "必须以文首标题或「一、基本情况」起笔；勿在第一节前写进度/管线句。"
+                "必须完整保留 Skill 骨架的固定章节与二级项；无资料写未核实，禁止删项或合并。"
                 "综合步骤2～5证据；无可靠来源写「未核实」；允许带来源链接。"
                 "第七章写完整身份核验与综合结论；末附「八、主要来源」。"
             )
@@ -561,6 +626,10 @@ def build_agent_context(task_id: str) -> Optional[str]:
 
 def advance_collision_phase(store: Any, task_id: str, *, max_rounds: int = 4) -> None:
     """压缩「四、关联碰撞」空窗：同轮尽量连推 4.1→4.2→4.3。"""
+    from report_04.gates import is_v3_report_tree
+
+    if is_v3_report_tree(task_id):
+        return
     for _ in range(max(1, int(max_rounds))):
         before = (
             get_step_status(task_id, "step4_identity"),
@@ -612,6 +681,13 @@ def enrich_block_reason(task_id: str, reason: str) -> str:
 
 def ensure_maigret_closed_if_tool_done(store: Any, task_id: str) -> bool:
     """已有成功 mcp_maigret_collect_accounts 但 step2_maigret 仍卡 running → 收口。"""
+    try:
+        from report_04.intake import intake_open
+
+        if intake_open(task_id):
+            return False
+    except Exception:
+        pass
     from collect_01 import db
     from report_04.phases import MAIGRET_STEP_KEY
 
@@ -644,6 +720,13 @@ def apply_identity_conclusion_from_thoughts(store: Any, task_id: str) -> bool:
     from report_04.phases import STREAM_TEXT_CONCLUSION_MARKER
     from report_04.stream_steps import apply_text_conclusion_from_assistant
 
+    try:
+        from report_04.intake import intake_open
+
+        if intake_open(task_id):
+            return False
+    except Exception:
+        pass
     if identity_step_terminal(task_id):
         return False
     row = db.fetch_one(
@@ -664,6 +747,31 @@ def apply_identity_conclusion_from_thoughts(store: Any, task_id: str) -> bool:
     return bool(ok)
 
 
+def ensure_v3_identity_started(store: Any, task_id: str) -> bool:
+    """Maigret 终态后立即点亮 3.1；3.2 候选主页作为认定中的佐证子任务。"""
+    from report_04.gates import is_v3_report_tree
+
+    if not is_v3_report_tree(task_id):
+        return False
+    if not can_advance_to_step5(task_id).get("ok"):
+        return False
+    cur = get_step_status(task_id, "step3_identity")
+    if cur in {"completed", "skipped", "failed", "running"}:
+        return False
+    # 先点亮 3.1，再允许 3.2 terminal，保证前端与 finished_at 不出现倒序。
+    store.set_step_status(
+        task_id,
+        "step3_identity",
+        "running",
+        message="账号认定中（候选主页作为佐证）",
+    )
+    try:
+        store.materialize_step4_from_candidates(task_id)
+    except Exception as exc:
+        logger.warning("v3 点亮认定前物化候选失败 task=%s: %s", task_id, exc)
+    return True
+
+
 def run_post_tool_light(store: Any, task_id: str) -> None:
     """post_tool 末尾：毫秒～百毫秒级，禁止 reconcile_stuck_pipeline。"""
     from report_04.gates import is_v3_report_tree
@@ -679,14 +787,18 @@ def run_post_tool_light(store: Any, task_id: str) -> None:
         maybe_close_abandoned_step4,
     )
 
+    # 长工具调用期间可能已在思考流写出 [输入分析结论]，此处兜底收口
+    try:
+        from report_04.intake import try_apply_intake_from_thoughts
+
+        try_apply_intake_from_thoughts(store, task_id)
+    except Exception as exc:
+        logger.warning("engine post_tool intake 兜底失败 task=%s: %s", task_id, exc)
+
     try:
         ensure_maigret_closed_if_tool_done(store, task_id)
     except Exception as exc:
         logger.warning("engine maigret 兜底收口失败 task=%s: %s", task_id, exc)
-    try:
-        apply_identity_conclusion_from_thoughts(store, task_id)
-    except Exception as exc:
-        logger.warning("engine 认定结论思考流兜底失败 task=%s: %s", task_id, exc)
 
     v3 = False
     try:
@@ -694,14 +806,11 @@ def run_post_tool_light(store: Any, task_id: str) -> None:
     except Exception:
         v3 = False
 
-    # 认定后写可信清单（v3 不走旧 _auto_step5_step6）
-    try:
-        from report_04.gates import identity_step_terminal
-
-        if identity_step_terminal(task_id):
-            store.run_validated_accounts(task_id)
-    except Exception as exc:
-        logger.warning("engine 可信清单失败 task=%s: %s", task_id, exc)
+    if v3:
+        try:
+            ensure_v3_identity_started(store, task_id)
+        except Exception as exc:
+            logger.warning("engine 点亮 v3 账号认定失败 task=%s: %s", task_id, exc)
 
     try:
         ensure_step4_parent_not_premature(store, task_id)
@@ -741,6 +850,21 @@ def run_post_tool_light(store: Any, task_id: str) -> None:
     except Exception as exc:
         logger.warning("engine close parent 失败 task=%s: %s", task_id, exc)
 
+    # 候选主页已收口后，才允许思考流里的认定结论完成 3.1。
+    try:
+        apply_identity_conclusion_from_thoughts(store, task_id)
+    except Exception as exc:
+        logger.warning("engine 认定结论思考流兜底失败 task=%s: %s", task_id, exc)
+
+    # 认定后写可信清单（v3 不走旧 _auto_step5_step6）
+    try:
+        from report_04.gates import identity_step_terminal
+
+        if identity_step_terminal(task_id):
+            store.run_validated_accounts(task_id)
+    except Exception as exc:
+        logger.warning("engine 可信清单失败 task=%s: %s", task_id, exc)
+
     if not v3:
         _auto_step5_step6(store, task_id)
 
@@ -769,11 +893,34 @@ def run_pre_llm_auto(store: Any, task_id: str) -> None:
 
     try:
         if is_v3_report_tree(task_id):
+            # 输入已含社交线索时自动收口 step0=A
+            try:
+                from report_04.intake import try_autocomplete_intake_from_seed
+                from report_04.gates import get_step_status as _gst
+                from report_04.phases import INTAKE_STEP_KEY
+
+                from report_04.intake import try_apply_intake_from_thoughts
+
+                try_autocomplete_intake_from_seed(store, task_id)
+                try_apply_intake_from_thoughts(store, task_id)
+                if _gst(task_id, INTAKE_STEP_KEY) == "pending":
+                    store.set_step_status(
+                        task_id,
+                        INTAKE_STEP_KEY,
+                        "running",
+                        message="分析用户输入…",
+                    )
+            except Exception as exc:
+                logger.warning("pre_llm v3 intake 兜底失败 task=%s: %s", task_id, exc)
             # 仅兜底状态，不跑完整 post_tool_light（远程库往返多）
             try:
                 ensure_maigret_closed_if_tool_done(store, task_id)
             except Exception as exc:
                 logger.warning("pre_llm v3 maigret 兜底失败 task=%s: %s", task_id, exc)
+            try:
+                ensure_v3_identity_started(store, task_id)
+            except Exception as exc:
+                logger.warning("pre_llm v3 点亮账号认定失败 task=%s: %s", task_id, exc)
             try:
                 apply_identity_conclusion_from_thoughts(store, task_id)
             except Exception as exc:
@@ -874,6 +1021,10 @@ def _auto_step5_step6(store: Any, task_id: str) -> None:
 
     档位：4.1 kickoff/settle → 4.2 validated → 4.3 osint → 预建发文子节点（不点亮 running）。
     """
+    from report_04.gates import is_v3_report_tree
+
+    if is_v3_report_tree(task_id):
+        return
     if not can_advance_to_step5(task_id).get("ok"):
         return
 

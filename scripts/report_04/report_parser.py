@@ -211,6 +211,56 @@ def looks_like_report_attempt(content: str) -> bool:
     return _section_marker_hits(body) >= 2
 
 
+def follows_current_report_template(content: str) -> bool:
+    """新八章模板：固定章节与 DOCX 规定的二级项不可省略。"""
+    compact = (content or "").replace(" ", "").replace("\u3000", "")
+    required_heads = (
+        "一、基本情况",
+        "二、在职在岗情况",
+        "三、人脉资源",
+        "四、政治立场",
+        "五、污点劣迹",
+        "六、公开表达与专业关注点",
+        "七、身份核验与综合结论",
+        "八、主要来源",
+    )
+    if any(head not in compact for head in required_heads):
+        return False
+
+    section1 = _extract_section(content, "一、基本情况", ("二、在职在岗情况",))
+    section2 = _extract_section(content, "二、在职在岗情况", ("三、人脉资源",))
+    section4 = _extract_section(content, "四、政治立场", ("五、污点劣迹",))
+    section5 = _extract_section(content, "五、污点劣迹", ("六、公开表达与专业关注点",))
+
+    required_section1 = (
+        "社交媒体",
+        "（一）教育经历",
+        "（二）工作经历",
+        "（三）性格特点",
+        "（四）家庭成员情况",
+        "（五）经济状况",
+    )
+    required_section2 = (
+        "（一）工作单位基本情况",
+        "（二）在岗情况",
+        "（三）岗位职能",
+    )
+    required_section4 = (
+        "（一）对华态度",
+        "（二）对所在国政治态度",
+        "（三）对美政治态度",
+    )
+    if any(marker not in section1 for marker in required_section1):
+        return False
+    if any(marker not in section2 for marker in required_section2):
+        return False
+    if any(marker not in section4 for marker in required_section4):
+        return False
+    if "（一）" not in section5:
+        return False
+    return True
+
+
 def is_final_report(content: str) -> bool:
     """合法步骤11终稿：够长、含≥2个旧章、且含五/六两章；以第一节开头；脏行先清洗再判定。
 
@@ -232,6 +282,9 @@ def is_final_report(content: str) -> bool:
     if _SECTION5_HEAD.replace(" ", "") not in compact:
         return False
     if _SECTION6_HEAD.replace(" ", "") not in compact:
+        return False
+    # 旧「一、账号基本信息」报告继续兼容；新「一、基本情况」必须严格遵循 DOCX 模板。
+    if _SECTION1_HEAD.replace(" ", "") in compact and not follows_current_report_template(body):
         return False
     return True
 

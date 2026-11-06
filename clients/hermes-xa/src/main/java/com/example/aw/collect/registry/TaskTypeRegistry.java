@@ -67,7 +67,7 @@ public class TaskTypeRegistry {
     public boolean matchesIntent(String dbTaskType, String userMessage) {
         String msg = userMessage == null ? "" : userMessage;
         if ("account_report".equals(dbTaskType)) {
-            return msg.matches("(?is).*(account-intelligence-report|account-intelligence-profile|画像写报|写报).*");
+            return msg.matches("(?is).*(account-intelligence-report|account-intelligence-profile|画像写报|公开资料核查|写报).*");
         }
         return true;
     }

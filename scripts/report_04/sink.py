@@ -54,6 +54,7 @@ from report_04.phases import (
     ANALYSIS_STEP_KEYS,
     APIFY_POST_TOOLS,
     APIFY_TOOL_PLATFORM,
+    INTAKE_STEP_KEY,
     MAIGRET_STEP_KEY,
     OSINT_ES_STEP_KEY,
     OSINT_WEB_STEP_KEY,
@@ -83,9 +84,15 @@ _LOG_DIR = hermes_home() / "logs"
 _LOG_FILE = _LOG_DIR / "report_04_sink.log"
 logger = logging.getLogger(__name__)
 
+# 不驱动步骤推进的元工具（post_tool 可忽略）
 _SKIP_STEP_TOOLS = frozenset({
     "skill_view", "clarify", "tool_search", "describe_tool", "todo", "terminal",
     "mcp_firecrawl_firecrawl_search", "mcp_firecrawl_firecrawl_scrape",
+})
+# pre_tool 白名单旁路：仅真正的元工具。禁止把 terminal 放进来——
+# 否则 step1 LinkedIn 等会绕过编排，改用 curl/shell 乱采。
+_PRETOOL_BYPASS_TOOLS = frozenset({
+    "skill_view", "clarify", "tool_search", "describe_tool", "todo",
 })
 # 公开信息检索（v3=step4_osint_web / 旧=step2_osint_web）：安静期 + 墙钟/次数上限
 _STEP3_QUIET_SECONDS = 15
@@ -316,9 +323,23 @@ def _is_late_web_search_tool(tool_name: str, task_id: str) -> Optional[str]:
 
     v3：step3_profiles=认定佐证主页，step4_osint_web=公开信息备料；
     认定完成后必须允许 web_*，否则会出现「编排催 web_search、门禁又禁 web_search」死锁。
+    step0 输入分析期间允许 web_* 搜链接。
     """
     if tool_name not in WEB_SEARCH_TOOLS:
         return None
+    try:
+        from report_04.intake import intake_open, is_person_path
+
+        if intake_open(task_id):
+            return None
+        # C 路径步骤3人物锚定阶段允许少量 web（与白名单配合；gate 在 identity 时默认无 web）
+        if is_person_path(task_id) and not (
+            get_step_status(task_id, "step3_identity") in {"completed", "skipped"}
+        ):
+            # 人物锚定主要靠文字；若模型想搜消歧，放到 step4。此处仍禁，避免和 step0 重复。
+            pass
+    except Exception:
+        pass
     try:
         from report_04.gates import identity_step_terminal, is_v3_report_tree
 
@@ -392,6 +413,16 @@ def _is_premature_step5_tool(tool_name: str, task_id: str) -> Optional[str]:
     """
     if tool_name not in _STEP5_STREAM_TOOLS:
         return None
+    try:
+        from report_04.gates import is_v3_report_tree
+
+        if is_v3_report_tree(task_id):
+            return (
+                "v3 六步写报已取消旧文本流/图片流核验，禁止调用 vision/OCR。"
+                "账号认定只由 [账号认定结论] 或 [人物锚定结论] 收口。"
+            )
+    except Exception:
+        pass
     s5 = get_step_status(task_id, "step4_identity")
     if s5 in {"completed", "skipped"}:
         try:
@@ -531,6 +562,13 @@ def _terminal_profile_failure_reason(
 
 def _step5_guidance_context(task_id: str) -> Optional[str]:
     """步骤五进行中时注入硬约束，约束模型勿抢跑发文。"""
+    try:
+        from report_04.gates import is_v3_report_tree
+
+        if is_v3_report_tree(task_id):
+            return None
+    except Exception:
+        pass
     s5 = get_step_status(task_id, "step4_identity")
     if s5 not in {"pending", "running"}:
         return None
@@ -732,6 +770,13 @@ def _resolve_collect_phase(
     if seed_collect:
         return None, "step1_seed"
     if tool_name in WEB_SEARCH_TOOLS:
+        try:
+            from report_04.intake import intake_open
+
+            if intake_open(task_id):
+                return None, INTAKE_STEP_KEY
+        except Exception:
+            pass
         return None, OSINT_WEB_STEP_KEY
     if tool_name == "mcp_maigret_collect_accounts":
         return None, MAIGRET_STEP_KEY
@@ -921,12 +966,77 @@ def _hold_discovery_until_seed(store: TaskStore, task_id: str) -> None:
         logger.info("种子未完成，回退抢跑步骤 task=%s step=%s", task_id, step_key)
 
 
+def _is_premature_before_intake(tool_name: str, task_id: str) -> Optional[str]:
+    """step0 未完成：仅允许 web_* 做输入分流（禁止 Maigret / terminal）。"""
+    try:
+        from report_04.intake import intake_open
+    except Exception:
+        return None
+    if not intake_open(task_id):
+        return None
+    if tool_name in WEB_SEARCH_TOOLS:
+        try:
+            from collect_01 import db as _db
+            from report_04.intake import INTAKE_MAX_WEB_SEARCH, INTAKE_MAX_WEB_TOOLS
+
+            row = _db.fetch_one(
+                """
+                SELECT
+                  SUM(tool_name='web_search' AND status='success') AS n_search,
+                  SUM(status='success') AS n_all
+                FROM hermes_tool_outputs
+                WHERE task_id=%s AND phase=%s
+                  AND tool_name IN ('web_search','web_extract',
+                    'browser_navigate','browser_vision','browser_click','browser_type')
+                """,
+                (task_id, INTAKE_STEP_KEY),
+            )
+            n_search = int((row or {}).get("n_search") or 0)
+            n_all = int((row or {}).get("n_all") or 0)
+            if n_search >= int(INTAKE_MAX_WEB_SEARCH) or n_all >= int(
+                INTAKE_MAX_WEB_TOOLS
+            ):
+                return (
+                    f"步骤0网页检索预算已用尽（search={n_search}, all={n_all}）。"
+                    "请立即根据现有证据输出 [输入分析结论]：找到可靠个人主页则 B，否则 C；"
+                    "禁止继续搜索或调用 Maigret。"
+                )
+        except Exception as exc:
+            logger.warning("步骤0网页预算检查失败 task=%s: %s", task_id, exc)
+        return None
+    if tool_name in _PRETOOL_BYPASS_TOOLS:
+        return None
+    if tool_name == "terminal":
+        return (
+            "步骤0输入分析禁止调用 terminal。"
+            "只用 web_search/web_extract 找社交主页；找到后输出 [输入分析结论] outcome=B，"
+            "再在步骤1用 MCP/Apify（LinkedIn→mcp_apify_harvestapi__linkedin_profile_scraper）。"
+        )
+    return (
+        f"步骤0输入分析尚未完成，禁止调用 {tool_name}。"
+        "请先分析用户输入并输出 [输入分析结论]（A/B/C）；"
+        "缺链接时只用 web_search/web_extract 查找社交主页，禁止 Maigret。"
+    )
+
+
 def _is_premature_before_seed(tool_name: str, task_id: str) -> Optional[str]:
     """种子未完成：禁止 Maigret / 网页检索及更后步骤的工具。"""
+    try:
+        from report_04.intake import intake_open, intake_terminal
+
+        if intake_open(task_id):
+            return None  # 由 _is_premature_before_intake 管
+        if not intake_terminal(task_id):
+            return None
+    except Exception:
+        pass
     if _seed_ready(task_id):
         return None
     if get_step_status(task_id, "step1_seed") in {"failed", "skipped"}:
-        return "步骤1种子已失败，任务应结束，禁止继续后续采集。"
+        # skipped：C 路径，允许后续认定/网页；failed 才硬停
+        if get_step_status(task_id, "step1_seed") == "failed":
+            return "步骤1种子已失败，任务应结束，禁止继续后续采集。"
+        return None
     if _is_seed_profile_tool(tool_name, task_id):
         return None
     if tool_name in {"mcp_apify_get_actor_run", "mcp_apify_get_dataset_items"}:
@@ -1043,6 +1153,10 @@ def _task_is_terminal(store: TaskStore, task_id: str) -> bool:
 def _maybe_stale_step5(store: TaskStore, task_id: str) -> None:
     """步骤五空等 Vision 超时则 fail-forward（会话中途也能解开）。"""
     try:
+        from report_04.gates import is_v3_report_tree
+
+        if is_v3_report_tree(task_id):
+            return
         from report_04.step_reconcile import maybe_fail_forward_stale_step5
 
         n = maybe_fail_forward_stale_step5(store, task_id, min_wait_seconds=45)
@@ -1055,15 +1169,31 @@ def _maybe_stale_step5(store: TaskStore, task_id: str) -> None:
 def _on_pre_tool(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """硬拦截：非法 YouTube channelId；步骤4未终态禁止 vision；步骤4后禁止无关 web；步骤5/6 未完成禁止发文；编排白名单。"""
     tool_name = _normalize_hook_tool_name(payload.get("tool_name"))
-    if not tool_name or tool_name in _SKIP_STEP_TOOLS:
+    # 注意：terminal 必须走白名单，不能进 bypass（否则 step1 会用 shell 代替 MCP）
+    if not tool_name or tool_name in _PRETOOL_BYPASS_TOOLS:
         return None
     try:
         task_id = _resolve_task_id(payload)
         if not task_id:
             return None
+        store = _store()
+        # 思考流可能已输出结构化结论，但 post_llm 尚未来得及落库。
+        # 门禁判定前先追平状态，避免模型完成 step0/3 后仍连续命中旧 gate。
+        try:
+            from report_04.intake import try_apply_intake_from_thoughts
+
+            try_apply_intake_from_thoughts(store, task_id)
+        except Exception as exc:
+            logger.warning("pre_tool 追平输入分析失败 task=%s: %s", task_id, exc)
+        try:
+            from report_04.engine import apply_identity_conclusion_from_thoughts
+
+            apply_identity_conclusion_from_thoughts(store, task_id)
+        except Exception as exc:
+            logger.warning("pre_tool 追平账号认定失败 task=%s: %s", task_id, exc)
         # 预算耗尽必须先收口 step4，否则只拦 web、不放行发文会卡死
         try:
-            _force_complete_step3_by_budget(_store(), task_id)
+            _force_complete_step3_by_budget(store, task_id)
         except Exception as exc:
             logger.warning(
                 "pre_tool 强制收口 step4_osint_web 失败 task=%s: %s", task_id, exc
@@ -1097,6 +1227,7 @@ def _on_pre_tool(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         reason = (
             _is_skipped_step_tool(tool_name, task_id, tool_args=tool_args, phase=phase)
             or _is_invalid_youtube_channel_id(tool_name, tool_args)
+            or _is_premature_before_intake(tool_name, task_id)
             or _is_premature_before_seed(tool_name, task_id)
             or _is_premature_step5_tool(tool_name, task_id)
             or _is_redundant_step5_vision(tool_name, tool_args, task_id)
@@ -1255,7 +1386,19 @@ def _on_pre_llm(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         if user_message and is_report_intent(user_message):
             _ensure_seed_from_dialogue(store, task_id, user_message=user_message, session_id=session_id)
             if get_step_status(task_id, "step1_seed") == "pending":
-                store.set_step_status(task_id, "step1_seed", "running", message="等待 Agent 确认种子账号…")
+                try:
+                    from report_04.intake import intake_terminal
+
+                    if not intake_terminal(task_id):
+                        pass  # step0 未完，禁止抢先点亮 step1
+                    else:
+                        store.set_step_status(
+                            task_id, "step1_seed", "running", message="等待 Agent 确认种子账号…"
+                        )
+                except Exception:
+                    store.set_step_status(
+                        task_id, "step1_seed", "running", message="等待 Agent 确认种子账号…"
+                    )
             if ex.get("is_first_turn") and not store.has_user_dialogue(task_id, "user_input"):
                 store.save_dialogue(task_id, session_id, "user", user_message, "user_input")
         context = _step5_guidance_context(task_id)
@@ -1278,6 +1421,13 @@ def _on_pre_llm(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 
 def _enter_step5(store: TaskStore, task_id: str) -> None:
+    try:
+        from report_04.gates import is_v3_report_tree
+
+        if is_v3_report_tree(task_id):
+            return
+    except Exception:
+        pass
     gate = can_advance_to_step5(task_id)
     if not gate.get("ok"):
         logger.info("进入 step5 跳过 task=%s: %s", task_id, gate.get("message"))
@@ -1298,9 +1448,13 @@ def _prepare_enter_step5(store: TaskStore, task_id: str) -> None:
 
 def _maybe_advance_step67(store: TaskStore, task_id: str) -> None:
     """认定终态后写入可信清单；步骤7父节点等发文工具再点亮。"""
-    from report_04.gates import identity_step_terminal
+    from report_04.gates import identity_step_terminal, is_v3_report_tree
     from report_04.stream_steps import rollup_step5_parent
 
+    if is_v3_report_tree(task_id):
+        if identity_step_terminal(task_id):
+            store.run_validated_accounts(task_id)
+        return
     gate5 = can_advance_to_step5(task_id)
     if not gate5.get("ok"):
         # v3 无旧 step4_identity：认定完成后仍要写可信清单
@@ -1319,6 +1473,10 @@ def _maybe_advance_step67(store: TaskStore, task_id: str) -> None:
 
 def _try_complete_step5_if_settled(store: TaskStore, task_id: str) -> bool:
     """兼容旧调用：改为子节点 rollup（4.1.2 由图片管线收口，不再等 vision settle）。"""
+    from report_04.gates import is_v3_report_tree
+
+    if is_v3_report_tree(task_id):
+        return False
     from report_04.stream_steps import rollup_step5_parent
 
     if not can_advance_to_step5(task_id).get("ok"):
@@ -1335,6 +1493,10 @@ def _on_step5_tool_after(
     success: bool,
 ) -> None:
     """Vision/OCR 仍可更新身份流；4.1.2 收口改由 image_pipeline，此处只 rollup。"""
+    from report_04.gates import is_v3_report_tree
+
+    if is_v3_report_tree(task_id):
+        return
     from report_04.stream_steps import rollup_step5_parent
 
     if tool_name in _STEP5_STREAM_TOOLS and get_step_status(task_id, "step4_identity") in {
@@ -1449,19 +1611,40 @@ def _mark_analysis_running(store: TaskStore, task_id: str) -> None:
             store.set_step_status(task_id, step_key, "running", message="分析进行中…")
 
 
-def _step3_threshold_met(task_id: str) -> tuple[bool, int, int, int]:
+def _identity_finished_at(task_id: str) -> Any:
+    """网页预算只允许从真实账号认定完成后起算。"""
     from collect_01 import db as _db
 
     row = _db.fetch_one(
         """
+        SELECT finished_at FROM collect_phase_steps
+        WHERE task_id=%s AND step_key IN ('step3_identity', 'step4_identity')
+          AND status='completed'
+        ORDER BY CASE WHEN step_key='step3_identity' THEN 0 ELSE 1 END
+        LIMIT 1
+        """,
+        (task_id,),
+    )
+    return (row or {}).get("finished_at")
+
+
+def _step3_threshold_met(task_id: str) -> tuple[bool, int, int, int]:
+    from collect_01 import db as _db
+
+    cutoff = _identity_finished_at(task_id)
+    cutoff_clause = " AND executed_at >= %s" if cutoff is not None else ""
+    params: tuple[Any, ...] = (task_id, cutoff) if cutoff is not None else (task_id,)
+    row = _db.fetch_one(
+        f"""
         SELECT
           SUM(tool_name='web_search' AND status='success') AS n_search,
           SUM(tool_name='web_extract' AND status='success') AS n_extract,
           SUM(tool_name LIKE 'browser_%%' AND status='success') AS n_browser
         FROM hermes_tool_outputs
         WHERE task_id=%s AND phase IN ('step4_osint_web', 'step2_osint_web')
+        {cutoff_clause}
         """,
-        (task_id,),
+        params,
     )
     n_search = int((row or {}).get("n_search") or 0)
     n_extract = int((row or {}).get("n_extract") or 0)
@@ -1478,8 +1661,11 @@ def _step3_web_tool_counts(task_id: str) -> tuple[int, int]:
     """返回 (web_search成功数, 全部WEB工具成功数)。"""
     from collect_01 import db as _db
 
+    cutoff = _identity_finished_at(task_id)
+    cutoff_clause = " AND executed_at >= %s" if cutoff is not None else ""
+    params: tuple[Any, ...] = (task_id, cutoff) if cutoff is not None else (task_id,)
     row = _db.fetch_one(
-        """
+        f"""
         SELECT
           SUM(tool_name='web_search' AND status='success') AS n_search,
           SUM(status='success') AS n_all
@@ -1487,8 +1673,9 @@ def _step3_web_tool_counts(task_id: str) -> tuple[int, int]:
         WHERE task_id=%s AND phase IN ('step4_osint_web', 'step2_osint_web')
           AND tool_name IN ('web_search','web_extract',
             'browser_navigate','browser_vision','browser_click','browser_type')
+          {cutoff_clause}
         """,
-        (task_id,),
+        params,
     )
     return int((row or {}).get("n_search") or 0), int((row or {}).get("n_all") or 0)
 
@@ -1509,15 +1696,27 @@ def _step3_wall_age_seconds(task_id: str) -> Optional[float]:
         (task_id,),
     )
     started = (row or {}).get("started_at")
+    cutoff = _identity_finished_at(task_id)
+    if started is not None and cutoff is not None:
+        try:
+            if started < cutoff:
+                started = None
+        except Exception:
+            started = None
     if started is None:
+        cutoff_clause = " AND executed_at >= %s" if cutoff is not None else ""
+        params: tuple[Any, ...] = (
+            (task_id, cutoff) if cutoff is not None else (task_id,)
+        )
         first = _db.fetch_one(
-            """
+            f"""
             SELECT MIN(executed_at) AS first_at FROM hermes_tool_outputs
             WHERE task_id=%s
               AND phase IN ('step4_osint_web', 'step2_osint_web')
               AND status='success'
+              {cutoff_clause}
             """,
-            (task_id,),
+            params,
         )
         started = (first or {}).get("first_at")
     if started is None:
@@ -1542,14 +1741,24 @@ def step3_web_budget_exhausted(task_id: str) -> Optional[str]:
     """公开信息检索预算耗尽原因；None 表示仍可继续检索。"""
     if _osint_web_status(task_id) in {"completed", "skipped"}:
         return "already_done"
+    max_search = int(_STEP3_MAX_WEB_SEARCH)
+    max_tools = int(_STEP3_MAX_WEB_TOOLS)
+    max_wall = float(_STEP3_MAX_WALL_SECONDS)
+    try:
+        from report_04.intake import bump_osint_budget_for_person
+
+        max_search, max_tools, max_wall = bump_osint_budget_for_person(task_id)
+        max_wall = float(max_wall)
+    except Exception:
+        pass
     wall = _step3_wall_age_seconds(task_id)
-    if wall is not None and wall >= float(_STEP3_MAX_WALL_SECONDS):
-        return f"墙钟已达 {int(_STEP3_MAX_WALL_SECONDS)}s"
+    if wall is not None and wall >= max_wall:
+        return f"墙钟已达 {int(max_wall)}s"
     n_search, n_all = _step3_web_tool_counts(task_id)
-    if n_search >= int(_STEP3_MAX_WEB_SEARCH):
-        return f"web_search 已达上限 {_STEP3_MAX_WEB_SEARCH} 次"
-    if n_all >= int(_STEP3_MAX_WEB_TOOLS):
-        return f"网页检索工具已达上限 {_STEP3_MAX_WEB_TOOLS} 次"
+    if n_search >= max_search:
+        return f"web_search 已达上限 {max_search} 次"
+    if n_all >= max_tools:
+        return f"网页检索工具已达上限 {max_tools} 次"
     return None
 
 
@@ -1669,9 +1878,16 @@ def _save_step3_candidates_from_tool(
     tool_name: str,
     raw_output: Any,
 ) -> None:
-    """从 web 工具原始输出解析并保存（v3 挂 step4，不用于扩账号）。"""
+    """旧树：从网页发现工具解析候选账号；v3 的步骤4严禁扩账号。"""
     if tool_name not in WEB_SEARCH_TOOLS:
         return
+    try:
+        from report_04.gates import is_v3_report_tree
+
+        if is_v3_report_tree(task_id):
+            return
+    except Exception:
+        pass
     if not can_run_step2_osint_web(task_id):
         return
     candidates = parse_web_search_candidates_from_tool(tool_name, raw_output)
@@ -1704,6 +1920,9 @@ def _try_step3_web_candidates(store: TaskStore, task_id: str, assistant: str) ->
     if (not v3_tree) and progress_text and mentions_analysis_steps(text):
         _mark_analysis_running(store, task_id)
         return
+    if v3_tree:
+        # v3 步骤4只为八章备料，助手正文中的社交 URL 不得回灌候选账号。
+        return
     if not can_run_step2_osint_web(task_id):
         return
     if looks_like_step3_summary(text):
@@ -1721,8 +1940,6 @@ def _try_step3_web_candidates(store: TaskStore, task_id: str, assistant: str) ->
                 message=f"网页检索候选 {len(candidates)} 个",
             )
     if progress_text:
-        return
-    if v3_tree:
         return
     blocks = parse_standalone_analysis_blocks(text)
     analysis_ok = can_advance_to_analysis(task_id).get("ok")
@@ -2309,6 +2526,48 @@ def _on_post_tool(payload: Dict[str, Any]) -> None:
     _ensure_seed_from_dialogue(store, task_id, user_message=user_message, session_id=session_id)
 
     tool_args = payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {}
+    early_result = ex.get("result")
+    if isinstance(early_result, (dict, list)):
+        early_output = json.dumps(early_result, ensure_ascii=False, default=str)
+    else:
+        early_output = str(early_result or "")
+    early_status = "success" if ex.get("status") == "ok" else "error"
+    policy_markers = (
+        "禁止调用",
+        "当前编排步骤",
+        "尚未开放",
+        "尚未完成",
+        "已终态",
+        "预算已用尽",
+    )
+    policy_blocked = (
+        early_status == "error"
+        and int(ex.get("duration_ms") or 0) <= 0
+        and any(marker in early_output for marker in policy_markers)
+    )
+    if policy_blocked:
+        try:
+            from report_04.orchestrator import infer_gate_step
+
+            audit_phase = infer_gate_step(task_id)
+            store.save_tool_output(
+                task_id=task_id,
+                tool_name=tool_name,
+                tool_args=tool_args,
+                tool_output=early_output,
+                tool_call_id=tool_call_id or f"anon-{tool_name}-{len(_SEEN_TOOL_CALLS)}",
+                duration_ms=ex.get("duration_ms"),
+                status="error",
+                phase=audit_phase,
+                mcp_server=infer_mcp_server(tool_name),
+            )
+        except Exception as exc:
+            logger.warning("门禁拦截审计入库失败 task=%s tool=%s: %s", task_id, tool_name, exc)
+        if tool_call_id:
+            _SEEN_TOOL_CALLS.add(tool_call_id)
+        logger.info("门禁拦截仅审计不推进 task=%s tool=%s", task_id, tool_name)
+        return
+
     input_accounts = store.get_seed_accounts(task_id)
     platform_hint_early = _LAST_APIFY_HINT.get(task_id, "")
     platform = _infer_platform(tool_name, tool_args, input_accounts, platform_hint_early)
@@ -2791,27 +3050,34 @@ def _on_post_tool(payload: Dict[str, Any]) -> None:
                 )
 
     if tool_name in WEB_SEARCH_TOOLS:
-        cur_web = get_step_status(task_id, OSINT_WEB_STEP_KEY)
-        if cur_web is None:
-            cur_web = get_step_status(task_id, "step2_osint_web")
-        if cur_web not in {"completed", "skipped"}:
-            if can_run_step2_osint_web(task_id):
-                store.set_step_status(
-                    task_id,
-                    OSINT_WEB_STEP_KEY,
-                    "running",
-                    message=f"网页检索中 ({tool_name})",
-                )
-            else:
-                logger.info(
-                    "公开信息检索跳过点亮 tool=%s task=%s: identity未终态 web=%s",
-                    tool_name,
-                    task_id,
-                    cur_web,
-                )
-        # 旧路径：网页候选入库（v3 认定后备料，不再扩账号）
-        _save_step3_candidates_from_tool(store, task_id, tool_name, result)
-        _maybe_complete_step3_after_web_tool(store, task_id, tool_name)
+        if output_step_key == INTAKE_STEP_KEY:
+            logger.info(
+                "输入分析网页工具仅归 step0，不计入 step4 预算 task=%s tool=%s",
+                task_id,
+                tool_name,
+            )
+        else:
+            cur_web = get_step_status(task_id, OSINT_WEB_STEP_KEY)
+            if cur_web is None:
+                cur_web = get_step_status(task_id, "step2_osint_web")
+            if cur_web not in {"completed", "skipped"}:
+                if can_run_step2_osint_web(task_id):
+                    store.set_step_status(
+                        task_id,
+                        OSINT_WEB_STEP_KEY,
+                        "running",
+                        message=f"网页检索中 ({tool_name})",
+                    )
+                else:
+                    logger.info(
+                        "公开信息检索跳过点亮 tool=%s task=%s: identity未终态 web=%s",
+                        tool_name,
+                        task_id,
+                        cur_web,
+                    )
+            # 旧路径：网页候选入库（v3 认定后备料，不再扩账号）
+            _save_step3_candidates_from_tool(store, task_id, tool_name, result)
+            _maybe_complete_step3_after_web_tool(store, task_id, tool_name)
 
     for prof in result_data.get("profiles") or []:
         store.build_streams_from_profile(task_id, prof)
@@ -2915,6 +3181,19 @@ def _on_post_llm_call(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         _ensure_seed_from_dialogue(store, task_id, user_message=user_message, session_id=session_id)
         if not assistant or assistant == "(empty)":
             return None
+        # 步骤0：解析 [输入分析结论] 并按 A/B/C 收口（正文 + 思考流兜底）
+        try:
+            from report_04.intake import (
+                try_apply_intake_from_assistant,
+                try_apply_intake_from_thoughts,
+            )
+
+            if try_apply_intake_from_assistant(store, task_id, assistant):
+                logger.info("post_llm 已收口 step0_intake task=%s", task_id)
+            elif try_apply_intake_from_thoughts(store, task_id):
+                logger.info("post_llm 思考流兜底收口 step0_intake task=%s", task_id)
+        except Exception as exc:
+            logger.warning("post_llm intake 收口失败 task=%s: %s", task_id, exc)
         report = _resolve_final_report_text(assistant, session_id)
         if report and is_final_report(report):
             if get_step_status(task_id, "step6_validated") != "completed":

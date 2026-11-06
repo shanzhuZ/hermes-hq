@@ -1,9 +1,11 @@
 ﻿# -*- coding: utf-8 -*-
 """04 公开资料核查写报 — hermes-hq 步骤树。
 
-流程（v3）：
+流程（v3 + intake）：
+0 输入分析（有社交→A；搜到链接→B；确认无社交→C）→
 1 主账号采集 → 2 Maigret 跨平台 → 3 账号认定 →
 4 公开信息检索（仅 web_* 备料八章，不搜其它账号）→ 5 全账号发文 → 6 八章报告。
+C 路径跳过 1/2/5，步骤3改为人物锚定，步骤4加深 web 备料。
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ SKILL_NAME = "account-intelligence-report"
 
 STEP_PLAN_KEY = "step_plan"
 
+PHASE_INTAKE_SHELL = "phase_intake"
 PHASE_LOCK_TARGET = "phase_lock_target"
 PHASE_DISCOVERY_SHELL = "phase_discovery"
 PHASE_IDENTITY_SHELL = "phase_identity"
@@ -46,6 +49,7 @@ _MCP_SEED_PLATFORMS = frozenset({"twitter", "weibo", "youtube", "bilibili"})
 
 ANALYSIS_STEP_KEYS: Tuple[str, ...] = ()
 
+INTAKE_STEP_KEY = "step0_intake"
 MAIGRET_STEP_KEY = "step2_maigret"
 IDENTITY_STEP_KEY = "step3_identity"
 # 兼容旧代码里的 step4_identity 字面量：门禁可用 resolve
@@ -58,10 +62,14 @@ PROFILE_PARENT_STEP_KEY = "step3_profiles"
 POST_PARENT_STEP_KEY = "step5_posts"
 REPORT_STEP_KEY = "step7_report"
 
-STREAM_PARENT_STEP_KEY = IDENTITY_STEP_KEY
-STREAM_TEXT_STEP_KEY = IDENTITY_STEP_KEY
-STREAM_IMAGE_STEP_KEY = IDENTITY_STEP_KEY
+# 旧树文本流/图片流兼容键必须与 v3 的 step3_identity 物理隔离。
+# 过去三者都别名到 step3_identity，后台图片线程会把真实认定结论覆写成 skipped。
+STREAM_PARENT_STEP_KEY = "step4_identity"
+STREAM_TEXT_STEP_KEY = "step4_text_compare"
+STREAM_IMAGE_STEP_KEY = "step4_image_compare"
 STREAM_TEXT_CONCLUSION_MARKER = "[账号认定结论]"
+PERSON_ANCHOR_CONCLUSION_MARKER = "[人物锚定结论]"
+INTAKE_CONCLUSION_MARKER = "[输入分析结论]"
 OSINT_ES_STEP_KEY = "step6_osint_es"
 OSINT_CONCLUSION_MARKER = "[社工库核验结论]"
 PDL_STEP_KEY = "step6_pdl"
@@ -121,8 +129,9 @@ def seed_agent_title(platform: Optional[str]) -> str:
 
 
 def phase_shell_steps() -> Tuple[StepDef, ...]:
-    """L1 六大阶段壳。"""
+    """L1 阶段壳：intake + 六大业务阶段。"""
     return (
+        StepDef(PHASE_INTAKE_SHELL, "0. 输入分析", 50, "0", STEP_PLAN_KEY, PHASE_SEED),
         StepDef(PHASE_LOCK_TARGET, "1. 主账号采集", 100, "1", STEP_PLAN_KEY, PHASE_SEED),
         StepDef(PHASE_DISCOVERY_SHELL, "2. Maigret 跨平台检索", 200, "2", STEP_PLAN_KEY, PHASE_DISCOVERY),
         StepDef(PHASE_IDENTITY_SHELL, "3. 账号认定", 300, "3", STEP_PLAN_KEY, PHASE_IDENTITY),
@@ -135,6 +144,14 @@ def phase_shell_steps() -> Tuple[StepDef, ...]:
 def execution_steps_for_platform(platform: Optional[str] = None) -> Tuple[StepDef, ...]:
     """业务执行步。"""
     return (
+        StepDef(
+            INTAKE_STEP_KEY,
+            "输入分析 Agent（分流 A/B/C）",
+            55,
+            "0.1",
+            PHASE_INTAKE_SHELL,
+            PHASE_SEED,
+        ),
         StepDef("step1_seed", seed_agent_title(platform), 110, "1.1", PHASE_LOCK_TARGET, PHASE_SEED),
         StepDef(
             MAIGRET_STEP_KEY,
@@ -154,7 +171,7 @@ def execution_steps_for_platform(platform: Optional[str] = None) -> Tuple[StepDe
         ),
         StepDef(
             PROFILE_PARENT_STEP_KEY,
-            "候选主页采集（认定佐证）",
+            "候选主页采集（可选认定佐证）",
             320,
             "3.2",
             PHASE_IDENTITY_SHELL,
@@ -188,7 +205,7 @@ def execution_steps_for_platform(platform: Optional[str] = None) -> Tuple[StepDe
 
 
 def root_steps_for_platform(platform: Optional[str] = None) -> Tuple[StepDef, ...]:
-    plan = StepDef(STEP_PLAN_KEY, "制定执行计划", 5, "0", None, None)
+    plan = StepDef(STEP_PLAN_KEY, "制定执行计划", 5, "P", None, None)
     return (plan,) + phase_shell_steps() + execution_steps_for_platform(platform)
 
 

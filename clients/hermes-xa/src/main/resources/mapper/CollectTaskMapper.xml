@@ -20,6 +20,14 @@
         LIMIT 1
     </select>
 
+    <select id="selectTasksBySessionId" resultType="java.util.HashMap">
+        SELECT task_id, session_id, status, task_type, created_at
+        FROM hermes_tasks
+        WHERE session_id = #{sessionId}
+        ORDER BY created_at DESC
+        LIMIT 50
+    </select>
+
     <insert id="insertTask">
         INSERT INTO hermes_tasks
             (task_id, task_type, session_id, status, current_phase, cross_platform, seed_json)
@@ -41,6 +49,74 @@
                 'user_input')
     </insert>
 
+    <!--
+      对话历史：每个 task 仅展示一条，且只考虑 user_input / summary / cancelled。
+      优先级 cancelled > summary > user_input；payload 始终取首条 user_input。
+      该查询服务于 /api/dialogues，与 /api/history/tasks 历史记录页面相互独立。
+    -->
+    <sql id="dialogueHistoryPreferredId">
+        (
+            SELECT preferred.id
+            FROM hermes_user_dialogues preferred
+            WHERE preferred.task_id = d.task_id
+              AND preferred.msg_type IN ('user_input', 'summary', 'cancelled')
+            ORDER BY
+                CASE preferred.msg_type
+                    WHEN 'cancelled' THEN 0
+                    WHEN 'summary' THEN 1
+                    WHEN 'user_input' THEN 2
+                    ELSE 9
+                END,
+                preferred.id DESC
+            LIMIT 1
+        )
+    </sql>
+
+    <sql id="dialogueHistoryWhere">
+        FROM hermes_user_dialogues d
+        INNER JOIN hermes_tasks t ON t.task_id = d.task_id
+        WHERE d.msg_type IN ('user_input', 'summary', 'cancelled')
+          AND d.id = <include refid="dialogueHistoryPreferredId"/>
+        <if test="dbTaskType != null and dbTaskType != ''">
+            AND t.task_type = #{dbTaskType}
+        </if>
+    </sql>
+
+    <select id="countAllDialogues" resultType="long">
+        SELECT COUNT(1)
+        <include refid="dialogueHistoryWhere"/>
+    </select>
+
+    <select id="selectDialoguesPage" resultType="java.util.HashMap">
+        SELECT d.id,
+               d.task_id,
+               d.session_id,
+               d.role,
+               d.content,
+               (
+                   SELECT user_input.payload_json
+                   FROM hermes_user_dialogues user_input
+                   WHERE user_input.task_id = d.task_id
+                     AND user_input.msg_type = 'user_input'
+                     AND user_input.payload_json IS NOT NULL
+                   ORDER BY user_input.id ASC
+                   LIMIT 1
+               ) AS payload_json,
+               d.msg_type,
+               t.task_type,
+               t.status,
+               d.created_at
+        <include refid="dialogueHistoryWhere"/>
+        ORDER BY d.created_at DESC, d.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countDialoguesGroupByTaskType" resultType="java.util.HashMap">
+        SELECT t.task_type AS task_type, COUNT(1) AS cnt
+        <include refid="dialogueHistoryWhere"/>
+        GROUP BY t.task_type
+    </select>
+
     <insert id="insertPhaseStep">
         INSERT IGNORE INTO collect_phase_steps
             (task_id, step_key, parent_step_key, step_order, step_node, title, source_tag, status)
@@ -50,15 +126,30 @@
 
     <update id="updateStepSkipped">
         UPDATE collect_phase_steps
-        SET status = 'skipped', message = #{message}, updated_at = NOW(3)
+        SET status = 'skipped',
+            message = #{message},
+            started_at = COALESCE(started_at, NOW(3)),
+            finished_at = COALESCE(finished_at, NOW(3)),
+            updated_at = NOW(3)
         WHERE task_id = #{taskId} AND step_key = #{stepKey}
+          AND status IN ('pending', 'running')
     </update>
 
     <update id="updateStepStatus">
         UPDATE collect_phase_steps
         SET status = #{status},
             message = #{message},
-            started_at = CASE WHEN #{status} = 'running' THEN COALESCE(started_at, NOW(3)) ELSE started_at END,
+            started_at = CASE
+                WHEN #{status} IN ('running', 'completed', 'failed', 'skipped')
+                    THEN COALESCE(started_at, NOW(3))
+                ELSE started_at
+            END,
+            finished_at = CASE
+                WHEN #{status} IN ('completed', 'failed', 'skipped')
+                    THEN COALESCE(finished_at, NOW(3))
+                WHEN #{status} IN ('pending', 'running') THEN NULL
+                ELSE finished_at
+            END,
             updated_at = NOW(3)
         WHERE task_id = #{taskId} AND step_key = #{stepKey}
     </update>

@@ -273,7 +273,7 @@ def discovery_steps_terminal(task_id: str) -> bool:
 
 def can_run_step2_maigret(task_id: str) -> bool:
     """主账号结束后即可 Maigret。"""
-    return get_step_status(task_id, "step1_seed") in {"completed", "skipped", "running"}
+    return get_step_status(task_id, "step1_seed") in {"completed", "skipped"}
 
 
 def can_run_step2_osint_web(task_id: str) -> bool:
@@ -292,11 +292,11 @@ def can_update_step4_children(task_id: str) -> bool:
 
 def identity_step_terminal(task_id: str) -> bool:
     """账号认定终态（新 step3_identity / 旧 step4_identity）。"""
-    for key in ("step3_identity", "step4_identity"):
-        st = get_step_status(task_id, key)
-        if st in {"completed", "skipped"}:
-            return True
-    return False
+    v3_status = get_step_status(task_id, "step3_identity")
+    if v3_status is not None:
+        # v3 的认定必须有结构化结论；skipped 不得作为放行条件。
+        return v3_status == "completed"
+    return get_step_status(task_id, "step4_identity") in {"completed", "skipped"}
 
 
 def can_update_step7_children(task_id: str) -> bool:
@@ -333,6 +333,8 @@ def pdl_terminal_or_absent(task_id: str) -> bool:
 def can_run_step7_collect(task_id: str) -> bool:
     """认定 + 公开信息检索完成后允许发文（v3：…→3认定→4网页备料→5发文）。"""
     if not identity_step_terminal(task_id):
+        if is_v3_report_tree(task_id):
+            return False
         if get_step_status(task_id, "step6_validated") != "completed":
             return False
     s_web = get_step_status(task_id, "step4_osint_web")
@@ -440,9 +442,9 @@ def seconds_since_last_tool(
 
 
 def can_advance_to_step5(task_id: str) -> Dict[str, Any]:
-    """Maigret 齐后可进账号认定（step3_identity）。"""
+    """Maigret 齐后可进账号认定（step3_identity）；C 路径 step1/2 可为 skipped。"""
     s1 = get_step_status(task_id, "step1_seed")
-    if s1 != "completed":
+    if s1 not in {"completed", "skipped"}:
         return {"ok": False, "message": f"step1_seed={s1 or 'pending'}"}
     if not discovery_steps_terminal(task_id):
         return {"ok": False, "message": "step2_maigret 未终态"}

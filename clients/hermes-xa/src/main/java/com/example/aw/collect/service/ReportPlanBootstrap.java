@@ -52,7 +52,7 @@ public class ReportPlanBootstrap {
         }
         sleepQuiet(THINKING_HOLD_MS);
 
-        String planning = "思考中…\n\n任务规划中…\n正在为本任务规划执行节点（共 6 个大阶段）…";
+        String planning = "思考中…\n\n任务规划中…\n正在为本任务规划执行节点（输入分析 + 6 个业务阶段）…";
         publishThinkingSafe(taskId, planning);
 
         sleepQuiet(PLANNING_HOLD_MS);
@@ -60,14 +60,14 @@ public class ReportPlanBootstrap {
         List<Map<String, Object>> phases = fixedPhases();
         StringBuilder listed = new StringBuilder();
         listed.append(planning).append("\n\n");
-        listed.append("已规划好本任务 6 大节点：\n");
+        listed.append("已规划好本任务执行节点：\n");
         for (Map<String, Object> p : phases) {
             listed.append(p.get("title")).append("\n");
         }
         listed.append("\n规划完成。");
         String listedText = listed.toString();
 
-        String planMsg = "已规划好节点：1.主账号采集；2.Maigret跨平台；3.账号认定；"
+        String planMsg = "已规划好节点：0.输入分析；1.主账号采集；2.Maigret跨平台；3.账号认定；"
                 + "4.公开信息检索；5.全账号发文；6.报告生成";
         collectTaskMapper.updateStepStatus(
                 taskId, ReportTaskCreateService.STEP_PLAN, "completed", planMsg);
@@ -77,7 +77,7 @@ public class ReportPlanBootstrap {
         Map<String, Object> ready = new LinkedHashMap<String, Object>();
         ready.put("taskId", taskId);
         ready.put("phases", phases);
-        ready.put("content", "已规划好六大执行阶段（待开始执行）");
+        ready.put("content", "已规划好输入分析与六大执行阶段（待开始执行）");
         ready.put("gatePhase", null);
         ready.put("executionStarted", Boolean.FALSE);
         try {
@@ -123,6 +123,7 @@ public class ReportPlanBootstrap {
 
     private static List<Map<String, Object>> fixedPhases() {
         List<Map<String, Object>> phases = new ArrayList<Map<String, Object>>();
+        phases.add(phase(0, ReportTaskCreateService.PHASE_INTAKE, "0. 输入分析"));
         phases.add(phase(1, ReportTaskCreateService.PHASE_LOCK_TARGET, "1. 主账号采集"));
         phases.add(phase(2, ReportTaskCreateService.PHASE_DISCOVERY, "2. Maigret 跨平台检索"));
         phases.add(phase(3, ReportTaskCreateService.PHASE_IDENTITY, "3. 账号认定"));

@@ -1,6 +1,8 @@
 package com.example.aw.collect.controller;
 
+import com.alibaba.fastjson.JSON;
 import com.example.aw.collect.mapper.CollectTaskMapper;
+import com.example.aw.collect.registry.TaskTypeRegistry;
 import com.example.aw.collect.service.CollectSubmitService;
 import com.example.aw.collect.service.TaskEndService;
 import com.example.aw.collect.service.TaskFinalAnswerQueryService;
@@ -24,7 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -66,6 +71,9 @@ public class CollectApiController {
 
     @Autowired
     private TaskEndService taskEndService;
+
+    @Autowired
+    private TaskTypeRegistry taskTypeRegistry;
 
     /**
      * 新对话：向 Hermes 申请 session_id（可选；collect/start 无 session 时也会自动建）。
@@ -285,6 +293,182 @@ public class CollectApiController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(detail);
         }
         return ResponseEntity.ok(detail);
+    }
+
+    /**
+     * 同一会话下历史任务列表。
+     */
+    @GetMapping("/conversations/{sessionId}/tasks")
+    public ResponseEntity<Map<String, Object>> listSessionTasks(@PathVariable String sessionId) {
+        List<Map<String, Object>> rows = collectTaskMapper.selectTasksBySessionId(sessionId);
+        List<Map<String, Object>> tasks = new ArrayList<Map<String, Object>>();
+        if (rows != null) {
+            for (Map<String, Object> row : rows) {
+                Map<String, Object> item = new LinkedHashMap<String, Object>();
+                Object taskId = row.get("task_id");
+                item.put("taskId", taskId);
+                item.put("taskType",
+                        taskTypeRegistry.labelOfDbTaskType(stringVal(row.get("task_type"))));
+                item.put("status", row.get("status"));
+                item.put("createdAt", row.get("created_at"));
+                item.put("treeUrl", "/api/tasks/" + taskId + "/tree");
+                tasks.add(item);
+            }
+        }
+        Map<String, Object> body = new LinkedHashMap<String, Object>();
+        body.put("sessionId", sessionId);
+        body.put("tasks", tasks);
+        return ResponseEntity.ok(body);
+    }
+
+    /**
+     * 对话历史业务类型枚举（独立于 /api/history/tasks 历史记录页面）。
+     */
+    @GetMapping("/dialogues/types")
+    public ResponseEntity<Map<String, Object>> listDialogueTypes() {
+        Map<String, Long> countByDb = new HashMap<String, Long>();
+        List<Map<String, Object>> groups = collectTaskMapper.countDialoguesGroupByTaskType();
+        if (groups != null) {
+            for (Map<String, Object> row : groups) {
+                String dbType = stringVal(row.get("task_type"));
+                Object countObj = row.get("cnt");
+                long count = countObj instanceof Number ? ((Number) countObj).longValue() : 0L;
+                if (!dbType.isEmpty()) {
+                    countByDb.put(dbType, Long.valueOf(count));
+                }
+            }
+        }
+
+        List<Map<String, Object>> types = new ArrayList<Map<String, Object>>();
+        for (TaskTypeRegistry.TaskTypeDef def : taskTypeRegistry.listPublicTypes()) {
+            Map<String, Object> item = new LinkedHashMap<String, Object>();
+            item.put("code", def.getFrontendType());
+            item.put("taskType", def.getLabel());
+            Long count = countByDb.get(def.getDbTaskType());
+            item.put("count", Long.valueOf(count == null ? 0L : count.longValue()));
+            types.add(item);
+        }
+        Map<String, Object> body = new LinkedHashMap<String, Object>();
+        body.put("types", types);
+        return ResponseEntity.ok(body);
+    }
+
+    /**
+     * 对话历史分页查询：每个 taskId 折叠为一条。
+     * 优先级 cancelled &gt; summary &gt; user_input，payload 始终取 user_input。
+     */
+    @GetMapping("/dialogues")
+    public ResponseEntity<Map<String, Object>> listDialogues(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "20") int pageSize,
+            @RequestParam(value = "taskType", required = false) String taskType) {
+        if (page < 1) {
+            page = 1;
+        }
+        if (pageSize < 1) {
+            pageSize = 20;
+        }
+        if (pageSize > 200) {
+            pageSize = 200;
+        }
+
+        String dbTaskType = null;
+        String filterLabel = null;
+        if (taskType != null && !taskType.trim().isEmpty()) {
+            TaskTypeRegistry.TaskTypeDef def = taskTypeRegistry.resolveExact(taskType);
+            if (def == null) {
+                Map<String, Object> error = new LinkedHashMap<String, Object>();
+                error.put("error", "invalid_taskType");
+                error.put("hint", "当前支持 report/profile/account_report");
+                return ResponseEntity.badRequest().body(error);
+            }
+            dbTaskType = def.getDbTaskType();
+            filterLabel = def.getLabel();
+        }
+
+        long total = collectTaskMapper.countAllDialogues(dbTaskType);
+        int offset = (page - 1) * pageSize;
+        List<Map<String, Object>> rows =
+                collectTaskMapper.selectDialoguesPage(offset, pageSize, dbTaskType);
+
+        Map<String, Object> body = new LinkedHashMap<String, Object>();
+        body.put("page", Integer.valueOf(page));
+        body.put("pageSize", Integer.valueOf(pageSize));
+        body.put("total", Long.valueOf(total));
+        if (filterLabel != null) {
+            body.put("taskType", filterLabel);
+        }
+        body.put("list", toDialogueItems(rows));
+        return ResponseEntity.ok(body);
+    }
+
+    /**
+     * 数据库行转前端驼峰结构。
+     */
+    private List<Map<String, Object>> toDialogueItems(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> dialogues = new ArrayList<Map<String, Object>>();
+        if (rows == null) {
+            return dialogues;
+        }
+        for (Map<String, Object> row : rows) {
+            Map<String, Object> item = new LinkedHashMap<String, Object>();
+            item.put("id", row.get("id"));
+            item.put("taskId", row.get("task_id"));
+            item.put("sessionId", row.get("session_id"));
+            item.put("role", row.get("role"));
+            item.put("content", row.get("content"));
+            item.put("msgType", stringVal(row.get("msg_type")));
+            item.put("taskType",
+                    taskTypeRegistry.labelOfDbTaskType(stringVal(row.get("task_type"))));
+            String status = stringVal(row.get("status"));
+            item.put("status", status);
+            item.put("statusLabel", labelTaskStatus(status));
+            item.put("payload", parsePayloadJson(row.get("payload_json")));
+            item.put("createdAt", row.get("created_at"));
+            dialogues.add(item);
+        }
+        return dialogues;
+    }
+
+    private static String labelTaskStatus(String status) {
+        if ("pending".equals(status)) {
+            return "待开始";
+        }
+        if ("running".equals(status)) {
+            return "进行中";
+        }
+        if ("completed".equals(status)) {
+            return "已完成";
+        }
+        if ("failed".equals(status)) {
+            return "失败";
+        }
+        if ("cancelled".equals(status)) {
+            return "已取消";
+        }
+        return status;
+    }
+
+    private static String stringVal(Object value) {
+        return value == null ? "" : String.valueOf(value).trim();
+    }
+
+    private Object parsePayloadJson(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof Map || raw instanceof List) {
+            return raw;
+        }
+        String text = String.valueOf(raw).trim();
+        if (text.isEmpty() || "null".equalsIgnoreCase(text)) {
+            return null;
+        }
+        try {
+            return JSON.parse(text);
+        } catch (Exception e) {
+            return text;
+        }
     }
 
     private String firstNonBlank(Map<String, Object> req, String key1, String key2) {

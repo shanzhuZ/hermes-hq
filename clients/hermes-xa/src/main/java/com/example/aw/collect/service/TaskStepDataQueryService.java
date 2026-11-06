@@ -72,9 +72,9 @@ public class TaskStepDataQueryService {
         } else if ("collect_videos".equals(dataType)) {
             String platform = resolveVideoPlatform(stepKey);
             records = videoAssetQueryService.listTaskVideosWithFrames(taskId, platform, STEP_FRAME_MAX_BYTES);
-        } else if ("step4_identity".equals(stepKey) || "step4_identity".equals(stepKey)) {
+        } else if ("step4_text_compare".equals(stepKey) || "step4_image_compare".equals(stepKey)) {
             // 4.1 / 4.1.1：直接返回身份流比对明细（非仅结论摘要）
-            String streamType = "step4_identity".equals(stepKey) ? "text" : "";
+            String streamType = "step4_text_compare".equals(stepKey) ? "text" : "image";
             records = loadIdentityStreamRecords(taskId, streamType);
             if (records.isEmpty()) {
                 records = loadDisplayRecords(taskId, stepKey);
@@ -105,7 +105,7 @@ public class TaskStepDataQueryService {
         out.put("recordCount", Integer.valueOf(records.size()));
         out.put("records", records);
         // 4.1.1：模型推理结论 + 规则摘要；并把结论前置到 records 便于前端直接渲染
-        if ("step4_identity".equals(stepKey)) {
+        if ("step4_text_compare".equals(stepKey)) {
             Map<String, Object> payload = parsePayloadMap(step.get("payload_json"));
             if (!payload.isEmpty()) {
                 out.put("summary", payload);
@@ -132,7 +132,7 @@ public class TaskStepDataQueryService {
             }
         }
         // 4.1.2：图片资产 + 分析结果 + 图片流对比结果
-        if ("step4_identity".equals(stepKey) && "collect_images".equals(dataType)) {
+        if ("step4_image_compare".equals(stepKey) && "collect_images".equals(dataType)) {
             Map<String, Object> payload = parsePayloadMap(step.get("payload_json"));
             List<Map<String, Object>> streamRows = loadIdentityStreamRecords(taskId, "image");
             out.put("streamRecordCount", Integer.valueOf(streamRows.size()));
@@ -339,11 +339,11 @@ public class TaskStepDataQueryService {
         if (stepKey.startsWith("step6_video_") || stepKey.startsWith("step5_video_")) {
             return "collect_videos";
         }
-        if ("step4_identity".equals(stepKey)) {
+        if ("step4_text_compare".equals(stepKey)) {
             // 文本流规则/模型比对明细（collect_identity_streams）
             return "collect_identity_streams";
         }
-        if ("step4_identity".equals(stepKey)) {
+        if ("step4_image_compare".equals(stepKey)) {
             // 图片资产（含 visionText）；streamRecords 另附身份流
             return "collect_images";
         }

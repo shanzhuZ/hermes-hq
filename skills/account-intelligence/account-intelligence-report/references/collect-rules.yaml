@@ -1,6 +1,6 @@
 # hermes-hq 04 公开资料核查 — 唯一参考（Skill 只加载本文件）
-# v3：主账号 → Maigret → 账号认定 → 公开信息检索（仅备料） → 全账号发文 → 八章报告
-version: "3.0.0-hq"
+# v3.1：输入分析(A/B/C) → 主账号 → Maigret → 账号认定 → 公开信息检索 → 全账号发文 → 八章报告
+version: "3.1.0-hq"
 
 identity: 用户指定的种子账号/人物为唯一目标；禁止把检索结果里的同名他人当种子。
 
@@ -9,56 +9,87 @@ forbidden_always:
   output: [综合画像, 用户画像, 图片资产管线系统未部署, image_pipeline未部署, （终稿完）, 报告完毕]
 
 mandatory_auto_steps:
-  [1_seed, 2_maigret, 3_identity, 4_osint_web, 5_posts, 6_report]
+  [0_intake, 1_seed, 2_maigret, 3_identity, 4_osint_web, 5_posts, 6_report]
 
 steps:
+  "0_intake":
+    do: |
+      分析用户下发信息，必须输出以 [输入分析结论] 开头的结构化结论，并给出分支 A/B/C：
+      - A：输入已含社交链接或 @账号 → outcome: A；填写 platform / account_handle（或 profile_url）；禁止长时间搜索。
+      - B：输入无链接，但可用有限次 web_search 搜到可用主页链接 → outcome: B；回填 platform/handle/url。
+      - C：确认公开渠道无可用社交链接 → outcome: C；填写 person_name / job_title / org；不要编造账号。
+      B 不能只凭同名：reason 至少列出两项独立一致锚点（职位/机构/地区/教育/履历），并说明未发现的关键冲突。
+      字段至少包含：outcome / person_name（若有）/ reason。
+      本步只做分流与补种子，禁止写八章、禁止发文、禁止做完整公开信息备料。
+      只许 web_search / web_extract（约 8 次）；【禁止】Maigret / 主页 MCP / Apify / terminal。
+      搜到个人主页链接 → 先输出 B 并回填，再进步骤1用 MCP；确认无个人社交 → C（不要为了「排除」再调 Maigret）。
+    forbid: [maigret, terminal, 发文工具, 写八章报告, 主页采集工具]
+
   "1_seed":
     do: |
-      仅采集用户指定的「主账号」主页（MCP 或 Apify），不要扩平台：
+      仅 A/B 路径执行。采集用户/回填的「主账号」主页（必须 MCP/Apify，禁止 terminal/curl），不要扩平台：
       - twitter → mcp_twitter_get_user_info
       - weibo → mcp_weibo_get_profile
       - youtube → mcp_youtube_get_channel_stats(channelId=UC…)
       - bilibili → mcp_bilibili_get_user_info
       - instagram/tiktok/telegram/facebook/github/linkedin → Apify 三轮（只取主页）
       - linkedin → mcp_apify_harvestapi__linkedin_profile_scraper → get_actor_run → get_dataset_items
-    forbid: [get_user_tweets, maigret, web_search, 写八章报告]
+      步骤1必须终态后才能启动步骤2，禁止将主页采集与 Maigret 并行。
+      C 路径本步由系统 skipped，勿强行采主页。
+    forbid: [get_user_tweets, maigret, web_search, terminal, 写八章报告]
 
   "2_maigret":
     do: |
-      用主账号 handle 调用 mcp_maigret_collect_accounts 做跨平台账号检索。
+      A/B：用主账号 handle 调用 mcp_maigret_collect_accounts 做跨平台账号检索。
       产出各平台候选 URL/handle 清单；不要在本步写认定结论或八章。
       禁止用 web_search 代替 Maigret 找账号。
+      C 路径本步由系统 skipped。
     forbid: [web_search, 发文工具, 写八章报告]
 
   "3_identity":
     do: |
-      账号认定：综合种子主页 + Maigret 候选，输出以 [账号认定结论] 开头的正文。
+      A/B：账号认定开始后，先处理 Maigret 新候选的主页佐证，再输出以 [账号认定结论] 开头的正文。
+      3.1 账号认定会先置 running；3.2 候选主页终态后，3.1 才能 completed。
       明确哪些账号属于同一人（纳入后续发文），哪些排除（同名/无关）。
-      需要对候选采主页佐证时，可用 MCP/Apify 主页工具（禁止再采种子平台重复一遍）。
+      结论必须分行列出：
+      validated_accounts: 每行「platform | handle | profile_url | 纳入依据」；
+      excluded_accounts: 每行「platform | handle | profile_url | 排除依据」。
+      只对 Maigret 新候选使用 MCP/Apify 主页工具；【禁止】重复采步骤1已入库的种子主页。
       LinkedIn 候选 → linkedin_profile_scraper → get_actor_run → get_dataset_items。
-      证据不足写「未核实」；本步完成后系统可将已认定账号纳入发文对象。
-    forbid: [web_search 找账号, 写八章报告, terminal]
+      C：无社交账号。输出以 [人物锚定结论] 开头：姓名/职位/机构/地区消歧依据；
+      写明「公开渠道未见可靠社交账号」。不要编造 handle。
+      v3 没有旧版文本流/图片流身份核验；禁止用有无图片决定账号认定状态。
+    forbid: [写八章报告, terminal, vision, OCR, 重复采种子主页]
 
   "4_osint_web":
     do: |
       目标：仅为终稿八章备料；只用 web_search / web_extract / browser_*。
-      【禁止】再用搜索去发现/扩其它社交账号（账号扩展已在步骤2–3完成）。
+      A/B：【禁止】再用搜索去发现/扩其它社交账号（账号扩展已在步骤0/2/3完成）。
+      C：本步为主产能，可加大检索轮次；以姓名+职位/机构/地区为锚深挖官网/新闻/机构页。
       以「已认定人物姓名 + 机构/头衔」为锚，按模板章节拆查询：
-      A 基本情况（教育/履历/家庭） B 在职在岗 C 人脉（公开职业关系）
-      D 政治立场公开表态出处 E 污点劣迹检索 F 演讲/专栏等表达入口（正文采样仍留给步骤5）
-      G 互证素材（供终稿第七章）
+      A 基本情况（教育、工作、性格依据、家庭、经济状况）
+      B 在职在岗（单位情况、在岗活动、岗位职能与圈层）
+      C 人脉资源（逐人的履历、影响力、公开关系依据与照片来源）
+      D 政治立场（对华、对所在国、对美公开表态）
+      E 污点劣迹 F 演讲/专栏等公开表达入口（正文采样仍留给步骤5）
+      G 身份互证素材（供终稿第七章）
       命中官方/讲者/新闻页再 web_extract；无可靠来源写未核实。
-    forbid: [maigret, 发文工具, 写八章报告, 搜索其它社交账号]
+    forbid: [maigret, 发文工具, 写八章报告]
 
   "5_posts":
     do: |
-      对步骤3已认定的全部账号调用发文工具（Twitter tweets / YouTube videos /
+      A/B：对步骤3已认定的全部账号调用发文工具（Twitter tweets / YouTube videos /
       微博 feeds / Apify 发文轮 / LinkedIn posts）。
       禁止未调工具就宣称发文完成；禁止对未认定账号采帖。
+      C 路径本步由系统 skipped。
     forbid: [写八章终稿]
 
   "6_report":
     do: |
       一次输出八章公开资料核查报告（见 Skill 骨架）。
-      综合步骤1–5；第七章写身份核验与综合结论；末附「八、主要来源」。
+      必须完整保留 Skill 骨架规定的章节与二级项，尤其：
+      一章的教育/工作/性格/家庭/经济状况，二章的单位/在岗/岗位职能，
+      三章逐人人脉，四章对华/所在国/对美态度，五章污点劣迹。
+      无可靠信息写未核实，不得删除、合并固定项或推测补齐。
+      综合步骤0–5；第七章写身份核验与综合结论（C 路径说明无社交依据）；末附「八、主要来源」。
     forbid: [在第一章前写步骤元叙述]

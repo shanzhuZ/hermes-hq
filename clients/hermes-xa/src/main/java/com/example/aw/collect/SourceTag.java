@@ -24,6 +24,7 @@ public final class SourceTag {
     private static final Set<String> APIFY_PLATFORMS = new HashSet<String>(
             Arrays.asList("facebook", "instagram", "tiktok", "telegram", "github", "linkedin"));
     private static final Set<String> SELF_STEPS = new HashSet<String>(Arrays.asList(
+            "step0_intake",
             "step3_identity",
             "step4_identity",
             "step7_report"));
@@ -62,7 +63,8 @@ public final class SourceTag {
             return null;
         }
         if ("step2_cross_platform".equals(key) || "step2_maigret".equals(key)
-                || "step2_osint_web".equals(key) || "step4_osint_web".equals(key)) {
+                || "step2_osint_web".equals(key) || "step4_osint_web".equals(key)
+                || "phase_intake".equals(key)) {
             return Collections.singletonList(OPEN);
         }
         if ("step6_osint_es".equals(key)) {

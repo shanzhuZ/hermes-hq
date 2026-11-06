@@ -81,6 +81,28 @@ def _prof_counts(task_id: str) -> Dict[str, int]:
     return {str(r["platform"]): int(r["c"]) for r in rows}
 
 
+def _step4_profile_counts(task_id: str) -> Dict[str, int]:
+    """v3 候选主页只统计 step3_profile_* 工具产物，不能拿步骤1种子主页冒充。"""
+    try:
+        from report_04.gates import is_v3_report_tree
+
+        if not is_v3_report_tree(task_id):
+            return _prof_counts(task_id)
+    except Exception:
+        return _prof_counts(task_id)
+    rows = db.fetch_all(
+        """
+        SELECT p.platform, COUNT(*) AS c
+        FROM collect_profiles p
+        JOIN hermes_tool_outputs t ON t.id=p.tool_output_id
+        WHERE p.task_id=%s AND t.task_id=%s AND t.phase LIKE 'step3_profile_%%'
+        GROUP BY p.platform
+        """,
+        (task_id, task_id),
+    )
+    return {str(r["platform"]): int(r["c"]) for r in rows}
+
+
 def _task_seed_handle(task_id: str) -> str:
     row = db.fetch_one("SELECT seed_json FROM hermes_tasks WHERE task_id=%s", (task_id,))
     if not row:
@@ -114,9 +136,9 @@ def _profile_collect_attempted(task_id: str, platform: str) -> bool:
         row = db.fetch_one(
             """
             SELECT COUNT(*) AS c FROM hermes_tool_outputs
-            WHERE task_id=%s AND tool_name=%s AND status='success'
+            WHERE task_id=%s AND tool_name=%s AND status='success' AND phase=%s
             """,
-            (task_id, tool_name),
+            (task_id, tool_name, profile_platform_step_key(platform)),
         )
         if int((row or {}).get("c") or 0) > 0:
             return True
@@ -138,8 +160,9 @@ def _post_collect_attempted(task_id: str, platform: str) -> bool:
             f"""
             SELECT COUNT(*) AS c FROM hermes_tool_outputs
             WHERE task_id=%s AND tool_name IN ({ph})
+              AND status='success' AND phase=%s
             """,
-            (task_id, *mcp_tools),
+            (task_id, *mcp_tools, post_platform_step_key(platform)),
         )
         if int((row or {}).get("c") or 0) > 0:
             return True
@@ -807,7 +830,7 @@ def apply_explicit_step4_skips_from_text(store: Any, task_id: str, text: str) ->
         cur = get_step_status(task_id, step_key)
         if cur not in {"pending", "running"}:
             continue
-        if _prof_counts(task_id).get(plat, 0) > 0:
+        if _step4_profile_counts(task_id).get(plat, 0) > 0:
             continue
         store.set_step_status(
             task_id,
@@ -850,7 +873,7 @@ def fail_forward_step4_unattempted_when_siblings_done(
         (task_id, PROFILE_PARENT_STEP_KEY),
     )
     has_progress = any(str(r.get("status") or "") == "completed" for r in children or [])
-    if not has_progress and sum(_prof_counts(task_id).values()) <= 0:
+    if not has_progress and sum(_step4_profile_counts(task_id).values()) <= 0:
         return 0
 
     updated = _skip_failed_only_step4_children(store, task_id)
@@ -862,7 +885,7 @@ def fail_forward_step4_unattempted_when_siblings_done(
         if cur not in {"pending", "running"}:
             continue
         plat = step_key.replace("step3_profile_", "", 1)
-        if _prof_counts(task_id).get(plat, 0) > 0:
+        if _step4_profile_counts(task_id).get(plat, 0) > 0:
             continue
         if _profile_collect_attempted(task_id, plat):
             continue
@@ -921,9 +944,9 @@ def count_step3_profile_fail_attempts(task_id: str, platform: str) -> int:
         row = db.fetch_one(
             f"""
             SELECT COUNT(*) AS c FROM hermes_tool_outputs
-            WHERE task_id=%s AND tool_name IN ({ph}) AND status='error'
+            WHERE task_id=%s AND tool_name IN ({ph}) AND status='error' AND phase=%s
             """,
-            (task_id, *tools),
+            (task_id, *tools, profile_platform_step_key(platform)),
         )
         n_out = int((row or {}).get("c") or 0)
     n_pay = _step3_profile_fail_count_payload(task_id, platform)
@@ -941,10 +964,10 @@ def _profile_last_error_looks_hard(task_id: str, platform: str) -> bool:
     row = db.fetch_one(
         f"""
         SELECT tool_name, tool_output FROM hermes_tool_outputs
-        WHERE task_id=%s AND tool_name IN ({ph}) AND status='error'
+        WHERE task_id=%s AND tool_name IN ({ph}) AND status='error' AND phase=%s
         ORDER BY id DESC LIMIT 1
         """,
-        (task_id, *tools),
+        (task_id, *tools, profile_platform_step_key(platform)),
     )
     if not row:
         return False
@@ -1072,7 +1095,7 @@ def _skip_failed_only_step4_children(
         if cur not in {"pending", "running"}:
             continue
         plat = step_key.replace("step3_profile_", "", 1)
-        if _prof_counts(task_id).get(plat, 0) > 0:
+        if _step4_profile_counts(task_id).get(plat, 0) > 0:
             continue
         if _profile_collect_attempted(task_id, plat):
             continue
@@ -1136,7 +1159,7 @@ def force_skip_unattempted_step4_children(
         if cur not in {"pending", "running"}:
             continue
         plat = step_key.replace("step3_profile_", "", 1)
-        if _prof_counts(task_id).get(plat, 0) > 0:
+        if _step4_profile_counts(task_id).get(plat, 0) > 0:
             continue
         if _profile_collect_attempted(task_id, plat):
             continue
@@ -1163,22 +1186,22 @@ def _profile_collect_failed_only(task_id: str, platform: str) -> bool:
     err = db.fetch_one(
         f"""
         SELECT COUNT(*) AS c FROM hermes_tool_outputs
-        WHERE task_id=%s AND tool_name IN ({ph}) AND status='error'
+        WHERE task_id=%s AND tool_name IN ({ph}) AND status='error' AND phase=%s
         """,
-        (task_id, *tools),
+        (task_id, *tools, profile_platform_step_key(platform)),
     )
     if int((err or {}).get("c") or 0) <= 0:
         return False
     ok = db.fetch_one(
         f"""
         SELECT COUNT(*) AS c FROM hermes_tool_outputs
-        WHERE task_id=%s AND tool_name IN ({ph}) AND status='success'
+        WHERE task_id=%s AND tool_name IN ({ph}) AND status='success' AND phase=%s
         """,
-        (task_id, *tools),
+        (task_id, *tools, profile_platform_step_key(platform)),
     )
     if int((ok or {}).get("c") or 0) > 0:
         return False
-    return _prof_counts(task_id).get(platform, 0) <= 0
+    return _step4_profile_counts(task_id).get(platform, 0) <= 0
 
 
 def _recent_step4_distraction(task_id: str, *, within_seconds: float = 90.0) -> bool:
@@ -1379,9 +1402,9 @@ def _apify_actor_success(task_id: str, platform: str) -> bool:
     row = db.fetch_one(
         """
         SELECT COUNT(*) AS c FROM hermes_tool_outputs
-        WHERE task_id=%s AND tool_name=%s AND status='success'
+        WHERE task_id=%s AND tool_name=%s AND status='success' AND phase=%s
         """,
-        (task_id, actor_tool),
+        (task_id, actor_tool, profile_platform_step_key(platform)),
     )
     return int((row or {}).get("c") or 0) > 0
 
@@ -1396,10 +1419,10 @@ def _apify_actor_empty_dataset(task_id: str, platform: str) -> bool:
     row = db.fetch_one(
         """
         SELECT tool_output FROM hermes_tool_outputs
-        WHERE task_id=%s AND tool_name=%s AND status='success'
+        WHERE task_id=%s AND tool_name=%s AND status='success' AND phase=%s
         ORDER BY id DESC LIMIT 1
         """,
-        (task_id, actor_tool),
+        (task_id, actor_tool, profile_platform_step_key(platform)),
     )
     if not row:
         return False
@@ -1456,10 +1479,11 @@ def _latest_apify_collect_outcome(task_id: str, platform: str) -> str:
     rows = db.fetch_all(
         """
         SELECT id, tool_args, tool_output FROM hermes_tool_outputs
-        WHERE task_id=%s AND tool_name='mcp_apify_get_dataset_items' AND status='success'
+        WHERE task_id=%s AND tool_name='mcp_apify_get_dataset_items'
+          AND status='success' AND phase=%s
         ORDER BY id DESC
         """,
-        (task_id,),
+        (task_id, profile_platform_step_key(platform)),
     )
     for row in rows or []:
         try:
@@ -1663,7 +1687,7 @@ def reconcile_step4_and_step7_children(store: Any, task_id: str) -> int:
     updated += skip_exhausted_step5_post_mcp(store, task_id)
     discovery_done = discovery_steps_terminal(task_id)
     post_counts = _post_counts(task_id)
-    prof_counts = _prof_counts(task_id)
+    prof_counts = _step4_profile_counts(task_id)
     children = db.fetch_all(
         """
         SELECT step_key, status, parent_step_key FROM collect_phase_steps
@@ -1968,6 +1992,11 @@ def reconcile_step2_from_maigret(store: Any, task_id: str) -> int:
 
 def reconcile_step3_from_web_tools(store: Any, task_id: str) -> int:
     """回放 web 工具输出，补入库候选并完成步骤三。"""
+    from report_04.gates import is_v3_report_tree
+
+    if is_v3_report_tree(task_id):
+        # v3 的网页步骤只做报告备料，不能把输入分析/新闻页面回灌成账号候选。
+        return 0
     if get_step_status(task_id, "step2_osint_web") in {"completed", "skipped"}:
         return 0
     if not can_run_step2_osint_web(task_id):
@@ -2473,10 +2502,12 @@ def _normalize_stored_mcp_tool_names(task_id: str) -> int:
 
 def _fail_forward_step5_pending_images(store: Any, task_id: str, *, reason: str = "会话结束兜底：未完成图片核验") -> int:
     """步骤五卡住时：收口身份流 pending，并兜底 4.1.1/4.1.2 后 rollup 父壳。"""
-    from report_04.gates import step3_profiles_terminal
+    from report_04.gates import is_v3_report_tree, step3_profiles_terminal
     from report_04.phases import STREAM_IMAGE_STEP_KEY, STREAM_TEXT_STEP_KEY
     from report_04.stream_steps import ensure_stream_child_steps, rollup_step5_parent
 
+    if is_v3_report_tree(task_id):
+        return 0
     if not step3_profiles_terminal(task_id):
         return 0
     if not can_advance_to_step5(task_id).get("ok"):
@@ -2534,8 +2565,10 @@ def maybe_fail_forward_stale_step5(
     会话中途兜底：文本流已比对完、仍等图片流 Vision，但模型长时间未写回图片流。
     仅依赖 session_end 时无法解开「Agent 还在跑、但从不调 vision」的死锁。
     """
-    from report_04.gates import step3_profiles_terminal
+    from report_04.gates import is_v3_report_tree, step3_profiles_terminal
 
+    if is_v3_report_tree(task_id):
+        return 0
     # 步骤四父/子未真正终态时禁止兜底（否则会出现步骤五「完成」后 stream 才出 vision）
     if not step3_profiles_terminal(task_id):
         return 0

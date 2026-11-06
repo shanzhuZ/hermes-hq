@@ -72,6 +72,8 @@ public final class CoarseToolStepMapping {
         plat.put("mcp_apify_vujeen__telegram_channel_scraper", "telegram");
         plat.put("mcp_apify_headlessagent__facebook_profile_post_scraper", "facebook");
         plat.put("mcp_apify_knotless_cadence__github_profile_scraper", "github");
+        plat.put("mcp_apify_harvestapi__linkedin_profile_scraper", "linkedin");
+        plat.put("mcp_apify_harvestapi__linkedin_profile_posts", "linkedin");
         TOOL_PLATFORM = Collections.unmodifiableMap(plat);
 
         Set<String> posts = new HashSet<String>();
@@ -79,6 +81,7 @@ public final class CoarseToolStepMapping {
         posts.add("mcp_youtube_analyze_channel_videos");
         posts.add("mcp_weibo_get_user_feeds");
         posts.add("mcp_weibo_get_feeds");
+        posts.add("mcp_apify_harvestapi__linkedin_profile_posts");
         posts.add("mcp_apify_get_dataset_items");
         POST_TOOLS = Collections.unmodifiableSet(posts);
 
@@ -94,6 +97,8 @@ public final class CoarseToolStepMapping {
         apify.add("mcp_apify_vujeen__telegram_channel_scraper");
         apify.add("mcp_apify_headlessagent__facebook_profile_post_scraper");
         apify.add("mcp_apify_knotless_cadence__github_profile_scraper");
+        apify.add("mcp_apify_harvestapi__linkedin_profile_scraper");
+        apify.add("mcp_apify_harvestapi__linkedin_profile_posts");
         APIFY_ACTOR_OR_DATASET = Collections.unmodifiableSet(apify);
 
         Set<String> vision = new HashSet<String>();
@@ -166,7 +171,7 @@ public final class CoarseToolStepMapping {
             }
             return parents;
         }
-        if (stepKey.startsWith("step3_post_") || stepKey.startsWith("step3_profile_")) {
+        if (stepKey.startsWith("step3_post_")) {
             parents.add("step3_profiles");
         }
         if (stepKey.startsWith("step3_profile_")) {
@@ -277,7 +282,8 @@ public final class CoarseToolStepMapping {
             return new Target("step4_osint_web", false);
         }
         if (VISION_OCR_TOOLS.contains(tool)) {
-            return new Target("step3_identity", false);
+            // v3 写报已下线旧文本流/图片流核验；Vision 不得粗同步到账号认定。
+            return null;
         }
         if ("mcp_twitter_get_user_info".equals(tool)
                 || "mcp_youtube_get_channel_stats".equals(tool)
@@ -305,6 +311,9 @@ public final class CoarseToolStepMapping {
         }
         if ("mcp_weibo_get_user_feeds".equals(tool) || "mcp_weibo_get_feeds".equals(tool)) {
             return new Target("step5_post_weibo", false);
+        }
+        if ("mcp_apify_harvestapi__linkedin_profile_posts".equals(tool)) {
+            return new Target("step5_post_linkedin", false);
         }
         String platform = TOOL_PLATFORM.get(tool);
         // Apify dataset/actor：默认挂步骤四；步骤七进行中时由 CoarseStepSync 改写为 step5_post_*

@@ -18,12 +18,14 @@ from report_04.phases import (
     PHASE_ANALYSIS,
     PHASE_DISCOVERY,
     PHASE_DONE,
+    PHASE_IDENTITY_SHELL,
     PHASE_POSTS,
     PHASE_PROFILES,
     PHASE_REPORT,
     PHASE_SEED,
     PHASE_STREAM_VALIDATE,
     PHASE_VALIDATED,
+    IDENTITY_STEP_KEY,
     POST_PARENT_STEP_KEY,
     PROFILE_PARENT_STEP_KEY,
     STEP_PLAN_KEY,
@@ -112,6 +114,74 @@ def _step_status(task_id: str, step_key: str) -> str:
         (task_id, step_key),
     )
     return str((row or {}).get("status") or "").strip() or "pending"
+
+
+def _v3_identity_verdict(
+    conclusion: str,
+    *,
+    account_id: str,
+    account_handle: str,
+    profile_url: str = "",
+) -> str:
+    """从结构化认定结论判断非种子候选；无法明确判断时保持 insufficient。"""
+    text = str(conclusion or "").lower()
+    if not text:
+        return "insufficient"
+    tokens = {
+        str(account_id or "").lower().strip().lstrip("@"),
+        str(account_handle or "").lower().strip().lstrip("@"),
+    }
+    url = str(profile_url or "").lower().strip().rstrip("/")
+    if url:
+        tokens.add(url)
+        tokens.add(url.rsplit("/", 1)[-1])
+    tokens = {token for token in tokens if len(token) >= 3}
+    if not tokens:
+        return "insufficient"
+
+    def _has_token(value: str, token: str) -> bool:
+        return bool(
+            re.search(
+                r"(?<![a-z0-9_.-])" + re.escape(token) + r"(?![a-z0-9_.-])",
+                value,
+                re.I,
+            )
+        )
+
+    negative = ("排除", "拒绝", "非本人", "非同一人", "同名", "无关", "excluded", "rejected")
+    positive = ("纳入", "认定为本人", "同一人", "通过", "validated", "included")
+    matched_lines = [
+        line.lower()
+        for line in str(conclusion or "").splitlines()
+        if any(_has_token(line.lower(), token) for token in tokens)
+    ]
+    if any(any(marker in line for marker in negative) for line in matched_lines):
+        return "rejected"
+    if any(any(marker in line for marker in positive) for line in matched_lines):
+        return "validated"
+
+    # 兼容严格字段块：validated_accounts 与 excluded_accounts。
+    validated_at = max(
+        text.rfind("validated_accounts"),
+        text.rfind("纳入账号"),
+        text.rfind("已认定账号"),
+    )
+    excluded_at = max(
+        text.rfind("excluded_accounts"),
+        text.rfind("排除账号"),
+        text.rfind("已排除账号"),
+    )
+    for token in tokens:
+        pos = text.find(token)
+        if pos < 0:
+            continue
+        if excluded_at >= 0 and pos > excluded_at:
+            return "rejected"
+        if validated_at >= 0 and pos > validated_at and (
+            excluded_at < 0 or pos < excluded_at
+        ):
+            return "validated"
+    return "insufficient"
 
 
 def _report_post_step_rows(task_id: str) -> List[Dict[str, Any]]:
@@ -860,25 +930,27 @@ class TaskStore:
             (task_id,),
         )
         seed_handle = ""
+        seed_platform = ""
         task = self.get_task(task_id) or {}
         try:
             seed = json.loads(task.get("seed_json") or "{}")
             seed_handle = str(seed.get("account_handle") or seed.get("account_hint") or "").strip()
+            seed_platform = str(seed.get("platform") or "").strip().lower()
         except json.JSONDecodeError:
             pass
         from report_04.candidate_parser import relevant_profile_platforms
 
-        platforms = relevant_profile_platforms(rows, seed_handle)
-        if not platforms:
-            seed = self.get_seed_accounts(task_id)
-            platforms = sorted(
-                {
-                    str(a.get("platform") or "")
-                    for a in seed
-                    if a.get("platform") and is_collectible_platform(str(a.get("platform")))
-                },
-                key=profile_step_order,
-            )
+        norm_seed_handle = seed_handle.lower().lstrip("@").rstrip("/")
+        candidate_rows = []
+        for row in rows:
+            plat = str(row.get("platform") or "").strip().lower()
+            handle = str(row.get("account_handle") or "").strip().lower().lstrip("@").rstrip("/")
+            # 种子主页已在步骤1采集，步骤3只物化 Maigret 发现的其它候选。
+            if plat == seed_platform and handle and handle == norm_seed_handle:
+                continue
+            candidate_rows.append(row)
+
+        platforms = relevant_profile_platforms(candidate_rows, seed_handle)
         if platforms:
             self.ensure_profile_steps(task_id, platforms)
         relevant_set = set(platforms)
@@ -907,6 +979,13 @@ class TaskStore:
         # 仅物化子节点；父步骤等首个主页采集工具再 running，避免步骤3 web 尚未停就假 running
         if get_step_status(task_id, parent) is None:
             self.ensure_step_row(task_id, parent)
+        if not platforms and get_step_status(task_id, parent) in {None, "pending"}:
+            self.set_step_status(
+                task_id,
+                parent,
+                "skipped",
+                message="Maigret 未发现可采候选；种子主页已在步骤1采集",
+            )
         from report_04.step_reconcile import reconcile_step4_and_step7_children
 
         reconcile_step4_and_step7_children(self, task_id)
@@ -958,6 +1037,43 @@ class TaskStore:
             (task_id, step_key),
         )
         cur_status = str((current or {}).get("status") or "")
+
+        # v3 的账号认定只能由结构化认定结论收口，严禁旧文本流/图片流覆写。
+        if step_key == IDENTITY_STEP_KEY:
+            try:
+                from report_04.gates import is_v3_report_tree
+
+                if is_v3_report_tree(task_id):
+                    task = self.get_task(task_id) or {}
+                    task_status = str(task.get("status") or "")
+                    msg = str(message or "")
+                    if cur_status == "completed" and status != "completed":
+                        logger.warning(
+                            "拒绝 v3 账号认定 completed→%s task=%s", status, task_id
+                        )
+                        return
+                    if status in {"skipped", "failed"} and task_status not in {
+                        "failed",
+                        "cancelled",
+                    }:
+                        logger.warning(
+                            "拒绝 v3 账号认定被标 %s task=%s message=%s",
+                            status,
+                            task_id,
+                            msg[:120],
+                        )
+                        return
+                    if status == "running" and any(
+                        token in msg for token in ("图片", "文本流", "Vision", "OCR")
+                    ):
+                        logger.warning(
+                            "拒绝旧核验逻辑点亮 v3 账号认定 task=%s message=%s",
+                            task_id,
+                            msg[:120],
+                        )
+                        return
+            except Exception as exc:
+                logger.warning("v3 账号认定状态守卫失败 task=%s: %s", task_id, exc)
 
         # skipped 终态：禁止回 pending/running（含 force_reopen）。允许升为 completed/failed。
         if cur_status == "skipped" and status in {"pending", "running"}:
@@ -1043,7 +1159,11 @@ class TaskStore:
                 fields.append("started_at=NULL")
         elif status in {"completed", "failed", "skipped"}:
             # 终态时间只写一次，避免后续流程把 finished_at 往后推造成「假顺序」
-            fields.append("finished_at=COALESCE(finished_at, NOW(3))")
+            if cur_status in {"completed", "failed", "skipped"} and cur_status != status:
+                # 终态纠错（如旧图片逻辑 skipped → 真实认定 completed）应记录纠正时刻。
+                fields.append("finished_at=NOW(3)")
+            else:
+                fields.append("finished_at=COALESCE(finished_at, NOW(3))")
             # pending→终态也补 started_at，避免前端看不到 running 时段
             if cur_status in {"pending", ""}:
                 fields.append("started_at=COALESCE(started_at, NOW(3))")
@@ -1242,6 +1362,17 @@ class TaskStore:
         cur = get_step_status(task_id, parent)
         if cur in {"completed", "skipped"}:
             return True
+        if parent == PHASE_IDENTITY_SHELL:
+            try:
+                from report_04.gates import is_v3_report_tree
+
+                if (
+                    is_v3_report_tree(task_id)
+                    and get_step_status(task_id, IDENTITY_STEP_KEY) != "completed"
+                ):
+                    return False
+            except Exception:
+                return False
         # 方案 A：发文父壳 / 内容采集壳须等视频孙节点终态（发文子步可先 completed）
         if parent in {POST_PARENT_STEP_KEY, PHASE_CONTENT}:
             try:
@@ -1526,6 +1657,14 @@ class TaskStore:
 
     def build_streams_from_profile(self, task_id: str, profile: Dict[str, Any]) -> None:
         """步骤四：从 profile 拆文本流/图片流。"""
+        try:
+            from report_04.gates import is_v3_report_tree
+
+            if is_v3_report_tree(task_id):
+                # v3 账号认定由结构化结论完成，不再生成旧文本流/图片流。
+                return
+        except Exception:
+            pass
         platform = profile["platform"]
         account_id = profile["account_id"]
         stream_id_base = _stream_id_base(task_id, platform, account_id)
@@ -1682,13 +1821,29 @@ class TaskStore:
 
     def run_stream_validation(self, task_id: str) -> None:
         """步骤五：文本流规则比对 → 收口 4.1.1；并触发 4.1.2 图片管线。"""
-        from report_04.gates import can_advance_to_step5
+        from report_04.gates import can_advance_to_step5, is_v3_report_tree
         from report_04.phases import STREAM_PARENT_STEP_KEY, STREAM_TEXT_STEP_KEY
         from report_04.stream_steps import (
             ensure_stream_child_steps,
             rollup_step5_parent,
             start_step5_image_pipeline,
         )
+
+        # v3：step3_identity 与旧文本流共用 key，禁止再用本函数 skip 认定步
+        try:
+            from report_04.intake import is_person_path
+
+            if is_person_path(task_id):
+                logger.info("run_stream_validation 跳过（C人物路径） task=%s", task_id)
+                return
+        except Exception:
+            pass
+        try:
+            if is_v3_report_tree(task_id):
+                logger.info("run_stream_validation 跳过（v3 无旧文本流核验） task=%s", task_id)
+                return
+        except Exception:
+            pass
 
         gate = can_advance_to_step5(task_id)
         if not gate.get("ok"):
@@ -1838,7 +1993,7 @@ class TaskStore:
         from report_04.gates import can_advance_to_step5, is_v3_report_tree
         from report_04.stream_steps import ensure_stream_child_steps, rollup_step5_parent, start_step5_image_pipeline
 
-        if is_v3_report_tree(task_id) and _step_status(task_id, "step4_identity") is None:
+        if is_v3_report_tree(task_id):
             logger.info("kickoff_step5 跳过（v3 无旧 step4_identity） task=%s", task_id)
             return False
         gate = can_advance_to_step5(task_id)
@@ -1883,7 +2038,10 @@ class TaskStore:
         count = 0
         try:
             profiles = db.fetch_all(
-                "SELECT platform, account_id, account_handle FROM collect_profiles WHERE task_id=%s",
+                """
+                SELECT platform, account_id, account_handle, profile_url
+                FROM collect_profiles WHERE task_id=%s
+                """,
                 (task_id,),
             )
             task = self.get_task(task_id) or {}
@@ -1893,6 +2051,46 @@ class TaskStore:
             except json.JSONDecodeError:
                 pass
             seed_platform = str(seed.get("platform") or "twitter").strip().lower()
+            seed_identifiers = {
+                str(seed.get("account_id") or "").strip().lower().lstrip("@"),
+                str(seed.get("account_handle") or "").strip().lower().lstrip("@"),
+                str(seed.get("account_hint") or "").strip().lower().lstrip("@"),
+                str(seed.get("profile_url") or "").strip().lower().rstrip("/"),
+            }
+            seed_accounts = seed.get("seed_accounts") if isinstance(seed, dict) else []
+            if isinstance(seed_accounts, list):
+                for account in seed_accounts:
+                    if not isinstance(account, dict):
+                        continue
+                    for key in ("account_id", "account_handle", "profile_url"):
+                        value = str(account.get(key) or "").strip().lower()
+                        if key == "account_handle":
+                            value = value.lstrip("@")
+                        if key == "profile_url":
+                            value = value.rstrip("/")
+                        if value:
+                            seed_identifiers.add(value)
+            seed_identifiers.discard("")
+            identity_payload: Dict[str, Any] = {}
+            identity_conclusion = ""
+            if v3:
+                row = db.fetch_one(
+                    """
+                    SELECT payload_json FROM collect_phase_steps
+                    WHERE task_id=%s AND step_key='step3_identity'
+                    """,
+                    (task_id,),
+                )
+                try:
+                    identity_payload = json.loads((row or {}).get("payload_json") or "{}")
+                except Exception:
+                    identity_payload = {}
+                if isinstance(identity_payload, dict):
+                    identity_conclusion = str(
+                        identity_payload.get("conclusion")
+                        or identity_payload.get("pending_conclusion")
+                        or ""
+                    )
             # 种子必入清单：profiles 缺失时从 seed_json 补一行
             if not profiles:
                 seed_accounts = seed.get("seed_accounts") if isinstance(seed, dict) else None
@@ -1912,21 +2110,41 @@ class TaskStore:
                 account_id = str(p.get("account_id") or "").strip()
                 if not platform or not account_id:
                     continue
-                is_seed = int(platform == seed_platform)
-                streams = db.fetch_all(
-                    """
-                    SELECT stream_id, validation_status, source_field FROM collect_identity_streams
-                    WHERE task_id=%s AND source_platform=%s AND source_account_id=%s
-                    """,
-                    (task_id, platform, account_id),
+                profile_identifiers = {
+                    account_id.lower().lstrip("@"),
+                    str(p.get("account_handle") or "").strip().lower().lstrip("@"),
+                    str(p.get("profile_url") or "").strip().lower().rstrip("/"),
+                }
+                profile_identifiers.discard("")
+                is_seed = int(
+                    platform == seed_platform
+                    and bool(seed_identifiers.intersection(profile_identifiers))
                 )
-                passes = [s for s in streams if s.get("validation_status") == "pass"]
-                substantive = [
-                    s for s in passes if s.get("source_field") in ("display_name", "bio")
-                ]
+                streams: List[Dict[str, Any]] = []
+                passes: List[Dict[str, Any]] = []
+                substantive: List[Dict[str, Any]] = []
+                if not v3:
+                    streams = db.fetch_all(
+                        """
+                        SELECT stream_id, validation_status, source_field FROM collect_identity_streams
+                        WHERE task_id=%s AND source_platform=%s AND source_account_id=%s
+                        """,
+                        (task_id, platform, account_id),
+                    )
+                    passes = [s for s in streams if s.get("validation_status") == "pass"]
+                    substantive = [
+                        s for s in passes if s.get("source_field") in ("display_name", "bio")
+                    ]
                 # 种子账号恒为 validated（主张号不可因图片流 fail 被踢出发文）
                 if is_seed:
                     verdict = "validated"
+                elif v3:
+                    verdict = _v3_identity_verdict(
+                        identity_conclusion,
+                        account_id=account_id,
+                        account_handle=str(p.get("account_handle") or ""),
+                        profile_url=str(p.get("profile_url") or ""),
+                    )
                 elif substantive:
                     verdict = "validated"
                 else:

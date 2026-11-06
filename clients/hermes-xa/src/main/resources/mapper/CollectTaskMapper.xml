@@ -1,0 +1,556 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.aw.collect.mapper.CollectTaskMapper">
+
+    <select id="selectTaskById" resultType="java.util.HashMap">
+        SELECT task_id, session_id, status, current_phase, cross_platform, task_type,
+               error_message, started_at, finished_at, created_at, updated_at
+        FROM hermes_tasks
+        WHERE task_id = #{taskId}
+        LIMIT 1
+    </select>
+
+    <select id="selectActiveTaskBySessionId" resultType="java.util.HashMap">
+        SELECT task_id, session_id, status
+        FROM hermes_tasks
+        WHERE session_id = #{sessionId}
+          AND status IN ('pending', 'running')
+        ORDER BY created_at DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insertTask">
+        INSERT INTO hermes_tasks
+            (task_id, task_type, session_id, status, current_phase, cross_platform, seed_json)
+        VALUES
+            (#{taskId}, #{taskType}, #{sessionId}, 'pending', 'resolve_seed', #{crossPlatform}, #{seedJson})
+    </insert>
+
+    <insert id="insertUserDialogue">
+        INSERT INTO hermes_user_dialogues (task_id, session_id, role, content, payload_json, msg_type)
+        VALUES (#{taskId}, #{sessionId}, 'user', #{content},
+                <choose>
+                    <when test="payloadJson != null and payloadJson != ''">
+                        CAST(#{payloadJson} AS JSON)
+                    </when>
+                    <otherwise>
+                        NULL
+                    </otherwise>
+                </choose>,
+                'user_input')
+    </insert>
+
+    <insert id="insertPhaseStep">
+        INSERT IGNORE INTO collect_phase_steps
+            (task_id, step_key, parent_step_key, step_order, step_node, title, source_tag, status)
+        VALUES
+            (#{taskId}, #{stepKey}, #{parentStepKey}, #{stepOrder}, #{stepNode}, #{title}, #{sourceTag}, 'pending')
+    </insert>
+
+    <update id="updateStepSkipped">
+        UPDATE collect_phase_steps
+        SET status = 'skipped', message = #{message}, updated_at = NOW(3)
+        WHERE task_id = #{taskId} AND step_key = #{stepKey}
+    </update>
+
+    <update id="updateStepStatus">
+        UPDATE collect_phase_steps
+        SET status = #{status},
+            message = #{message},
+            started_at = CASE WHEN #{status} = 'running' THEN COALESCE(started_at, NOW(3)) ELSE started_at END,
+            updated_at = NOW(3)
+        WHERE task_id = #{taskId} AND step_key = #{stepKey}
+    </update>
+
+    <select id="selectStepStatus" resultType="java.lang.String">
+        SELECT status
+        FROM collect_phase_steps
+        WHERE task_id = #{taskId}
+          AND step_key = #{stepKey}
+        LIMIT 1
+    </select>
+
+    <update id="updateStepStatusCoarseRunning">
+        UPDATE collect_phase_steps
+        SET status = 'running',
+            message = #{message},
+            started_at = COALESCE(started_at, NOW(3)),
+            finished_at = NULL,
+            updated_at = NOW(3)
+        WHERE task_id = #{taskId}
+          AND step_key = #{stepKey}
+          AND status IN ('pending', 'running')
+    </update>
+
+    <update id="updateStepStatusCoarseCompleted">
+        UPDATE collect_phase_steps
+        SET status = 'completed',
+            message = #{message},
+            finished_at = COALESCE(finished_at, NOW(3)),
+            updated_at = NOW(3)
+        WHERE task_id = #{taskId}
+          AND step_key = #{stepKey}
+          AND status IN ('pending', 'running')
+    </update>
+
+    <select id="selectThoughtsFinal" resultType="java.util.HashMap">
+        SELECT id, content, created_at
+        FROM hermes_user_dialogues
+        WHERE task_id = #{taskId} AND msg_type = 'thoughts_final'
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <insert id="insertThoughtsFinal">
+        INSERT INTO hermes_user_dialogues (task_id, session_id, role, content, msg_type)
+        VALUES (#{taskId}, #{sessionId}, 'assistant', #{content}, 'thoughts_final')
+    </insert>
+
+    <update id="updateThoughtsFinal">
+        UPDATE hermes_user_dialogues
+        SET content = #{content}
+        WHERE task_id = #{taskId} AND msg_type = 'thoughts_final'
+    </update>
+
+    <update id="markTaskFailed">
+        UPDATE hermes_tasks
+        SET status = 'failed',
+            error_message = #{errorMessage},
+            finished_at = NOW(3),
+            updated_at = NOW(3)
+        WHERE task_id = #{taskId}
+          AND status NOT IN ('completed', 'cancelled')
+    </update>
+
+    <update id="markTaskCompleted">
+        UPDATE hermes_tasks
+        SET status = 'completed',
+            current_phase = #{phase},
+            finished_at = COALESCE(finished_at, NOW(3)),
+            updated_at = NOW(3)
+        WHERE task_id = #{taskId}
+          AND status NOT IN ('failed', 'cancelled')
+    </update>
+
+    <!-- 用户结束：仅 pending/running 可转 cancelled，避免覆盖 completed/failed -->
+    <update id="markTaskCancelled">
+        UPDATE hermes_tasks
+        SET status = 'cancelled',
+            error_message = #{errorMessage},
+            finished_at = NOW(3),
+            updated_at = NOW(3)
+        WHERE task_id = #{taskId}
+          AND status IN ('pending', 'running')
+    </update>
+
+    <!-- 用户结束：非 summary 的 assistant 行 msg_type → cancelled（保留 user_input / summary） -->
+    <update id="markLatestAssistantDialogueCancelled">
+        UPDATE hermes_user_dialogues
+        SET msg_type = 'cancelled'
+        WHERE task_id = #{taskId}
+          AND role = 'assistant'
+          AND (msg_type IS NULL OR msg_type &lt;&gt; 'summary')
+    </update>
+
+    <insert id="insertCancelledDialogue">
+        INSERT INTO hermes_user_dialogues (task_id, session_id, role, content, msg_type)
+        VALUES (#{taskId}, #{sessionId}, 'assistant', #{content}, 'cancelled')
+    </insert>
+
+    <!-- 任务首条用户提问（历史详情 question；含 payload_json） -->
+    <select id="selectUserInput" resultType="java.util.HashMap">
+        SELECT content, payload_json, created_at
+        FROM hermes_user_dialogues
+        WHERE task_id = #{taskId} AND msg_type = 'user_input'
+        ORDER BY id ASC
+        LIMIT 1
+    </select>
+
+    <!--
+      历史问答专用 SQL（供 HistoryQaQueryService 使用）
+      - 含 pending / running / completed / cancelled
+      - 列表通过子查询附带用户提问、payload、summary 预览，避免 N+1
+    -->
+    <!-- 历史问答：pending/running/completed/cancelled/failed；可选按业务类型、单一状态再筛 -->
+    <sql id="historyTaskWhere">
+        FROM hermes_tasks t
+        WHERE t.status IN ('pending', 'running', 'completed', 'cancelled', 'failed')
+        <if test="dbTaskType != null and dbTaskType != ''">
+            AND t.task_type = #{dbTaskType}
+        </if>
+        <if test="status != null and status != ''">
+            AND t.status = #{status}
+        </if>
+    </sql>
+
+    <!-- 列表总数：与 selectHistoryTasksPage 使用同一 historyTaskWhere，保证 total 与 list 一致 -->
+    <select id="countHistoryTasks" resultType="long">
+        SELECT COUNT(1)
+        <include refid="historyTaskWhere"/>
+    </select>
+
+    <!--
+      列表分页行：
+      question / payload_json —— 该任务最早一条 user_input（提问展示）
+      answer_preview / answer_msg_type / report_tags —— 与 /api/dialogues 折叠一致：
+        cancelled > summary > user_input
+    -->
+    <select id="selectHistoryTasksPage" resultType="java.util.HashMap">
+        SELECT t.task_id,
+               t.session_id,
+               t.task_type,
+               t.status,
+               t.created_at,
+               t.started_at,
+               t.finished_at,
+               (
+                   SELECT u.content
+                   FROM hermes_user_dialogues u
+                   WHERE u.task_id = t.task_id AND u.msg_type = 'user_input'
+                   ORDER BY u.id ASC
+                   LIMIT 1
+               ) AS question,
+               (
+                   SELECT u.payload_json
+                   FROM hermes_user_dialogues u
+                   WHERE u.task_id = t.task_id AND u.msg_type = 'user_input'
+                   ORDER BY u.id ASC
+                   LIMIT 1
+               ) AS payload_json,
+               (
+                   SELECT s.content
+                   FROM hermes_user_dialogues s
+                   WHERE s.task_id = t.task_id
+                     AND s.msg_type IN ('cancelled', 'summary', 'user_input')
+                   ORDER BY
+                       CASE s.msg_type
+                           WHEN 'cancelled' THEN 0
+                           WHEN 'summary' THEN 1
+                           WHEN 'user_input' THEN 2
+                           ELSE 9
+                       END,
+                       s.id DESC
+                   LIMIT 1
+               ) AS answer_preview,
+               (
+                   SELECT s.msg_type
+                   FROM hermes_user_dialogues s
+                   WHERE s.task_id = t.task_id
+                     AND s.msg_type IN ('cancelled', 'summary', 'user_input')
+                   ORDER BY
+                       CASE s.msg_type
+                           WHEN 'cancelled' THEN 0
+                           WHEN 'summary' THEN 1
+                           WHEN 'user_input' THEN 2
+                           ELSE 9
+                       END,
+                       s.id DESC
+                   LIMIT 1
+               ) AS answer_msg_type,
+               (
+                   SELECT s.report_tags
+                   FROM hermes_user_dialogues s
+                   WHERE s.task_id = t.task_id
+                     AND s.msg_type IN ('cancelled', 'summary', 'user_input')
+                   ORDER BY
+                       CASE s.msg_type
+                           WHEN 'cancelled' THEN 0
+                           WHEN 'summary' THEN 1
+                           WHEN 'user_input' THEN 2
+                           ELSE 9
+                       END,
+                       s.id DESC
+                   LIMIT 1
+               ) AS report_tags
+        <include refid="historyTaskWhere"/>
+        ORDER BY t.created_at DESC, t.task_id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 详情页 counts.profiles -->
+    <select id="countProfilesByTaskId" resultType="long">
+        SELECT COUNT(1) FROM collect_profiles WHERE task_id = #{taskId}
+    </select>
+
+    <!-- 详情页 counts.posts -->
+    <select id="countPostsByTaskId" resultType="long">
+        SELECT COUNT(1) FROM collect_posts WHERE task_id = #{taskId}
+    </select>
+
+    <select id="selectSummary" resultType="java.util.HashMap">
+        SELECT content, created_at, report_tags
+        FROM hermes_user_dialogues
+        WHERE task_id = #{taskId} AND msg_type = 'summary'
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectPhaseSteps" resultType="java.util.HashMap">
+        SELECT step_key, parent_step_key, step_order, step_node, title, source_tag,
+               status, message, progress_pct, started_at, finished_at
+        FROM collect_phase_steps
+        WHERE task_id = #{taskId}
+        ORDER BY step_order ASC, step_key ASC
+    </select>
+
+    <!-- 04 六壳进度：树接口现算后回写，值相同则跳过 -->
+    <update id="updateStepProgressPctIfChanged">
+        UPDATE collect_phase_steps
+        SET progress_pct = #{progressPct}
+        WHERE task_id = #{taskId}
+          AND step_key = #{stepKey}
+          AND (progress_pct IS NULL OR progress_pct &lt;&gt; #{progressPct})
+    </update>
+
+    <select id="selectToolOutputs" resultType="java.util.HashMap">
+        SELECT id, tool_name, status, duration_ms, executed_at, phase
+        FROM hermes_tool_outputs
+        WHERE task_id = #{taskId}
+        ORDER BY id ASC
+    </select>
+
+    <select id="selectSuccessToolOutputsByTaskAndPhase" resultType="java.util.HashMap">
+        SELECT task_id, phase, mcp_server, tool_name
+        FROM hermes_tool_outputs
+        WHERE task_id = #{taskId}
+          AND phase = #{phase}
+          AND status = 'success'
+        ORDER BY id ASC
+    </select>
+
+    <select id="selectToolOutputById" resultType="java.util.HashMap">
+        SELECT id, tool_name, tool_args, tool_output, status, duration_ms, executed_at
+        FROM hermes_tool_outputs
+        WHERE task_id = #{taskId} AND id = #{toolId}
+        LIMIT 1
+    </select>
+
+    <select id="selectPhaseStep" resultType="java.util.HashMap">
+        SELECT step_key, title, source_tag, status, message, payload_json, started_at, finished_at
+        FROM collect_phase_steps
+        WHERE task_id = #{taskId} AND step_key = #{stepKey}
+        LIMIT 1
+    </select>
+
+    <select id="selectTaskSeedJson" resultType="java.util.HashMap">
+        SELECT seed_json FROM hermes_tasks WHERE task_id = #{taskId} LIMIT 1
+    </select>
+
+    <select id="selectProfilesByTaskId" resultType="java.util.HashMap">
+        SELECT id, platform, account_id, account_handle, display_name, bio, avatar_url,
+               profile_url, follower_count, following_count, content_count, verified,
+               visibility, collect_status, collected_at
+        FROM collect_profiles
+        WHERE task_id = #{taskId}
+        ORDER BY collected_at ASC, id ASC
+    </select>
+
+    <select id="selectProfilesByTaskAndPlatform" resultType="java.util.HashMap">
+        SELECT id, platform, account_id, account_handle, display_name, bio, avatar_url,
+               profile_url, follower_count, following_count, content_count, verified,
+               visibility, collect_status, collected_at
+        FROM collect_profiles
+        WHERE task_id = #{taskId} AND platform = #{platform}
+        ORDER BY collected_at ASC, id ASC
+    </select>
+
+    <select id="selectCrossPlatformCandidates" resultType="java.util.HashMap">
+        SELECT id, platform, account_id, account_handle, confidence, evidence_json,
+               match_strategy, status, created_at
+        FROM cross_platform_candidates
+        WHERE task_id = #{taskId}
+        ORDER BY confidence DESC, id ASC
+    </select>
+
+    <select id="selectIdentityStreams" resultType="java.util.HashMap">
+        SELECT stream_id, stream_type, source_platform, source_account_id, source_field,
+               payload_text, payload_url, validation_status, validation_detail, created_at, updated_at
+        FROM collect_identity_streams
+        WHERE task_id = #{taskId}
+        ORDER BY created_at ASC
+    </select>
+
+    <select id="selectIdentityStreamsByType" resultType="java.util.HashMap">
+        SELECT stream_id, stream_type, source_platform, source_account_id, source_field,
+               payload_text, payload_url, validation_status, validation_detail, created_at, updated_at
+        FROM collect_identity_streams
+        WHERE task_id = #{taskId} AND stream_type = #{streamType}
+        ORDER BY created_at ASC
+    </select>
+
+    <select id="selectValidatedAccounts" resultType="java.util.HashMap">
+        SELECT id, platform, account_id, account_handle, confidence, verdict,
+               stream_ids_json, is_seed, created_at
+        FROM collect_validated_accounts
+        WHERE task_id = #{taskId}
+        ORDER BY is_seed DESC, confidence DESC, id ASC
+    </select>
+
+    <select id="selectOsintHits" resultType="java.util.HashMap">
+        SELECT id, task_id, platform, account_id, profile_url, source_index, query_text,
+               hit_count, hit_json, tool_output_id, created_at, updated_at
+        FROM collect_osint_hits
+        WHERE task_id = #{taskId}
+        ORDER BY id ASC
+    </select>
+
+    <select id="selectPostsByTaskId" resultType="java.util.HashMap">
+        SELECT id, platform, account_id, content_id, content_type, title, content_text,
+               content_url, published_at, view_count, like_count, comment_count, repost_count,
+               media_json, created_at
+        FROM collect_posts
+        WHERE task_id = #{taskId}
+        ORDER BY published_at DESC, id DESC
+    </select>
+
+    <select id="selectPostsByTaskAndPlatform" resultType="java.util.HashMap">
+        SELECT id, platform, account_id, content_id, content_type, title, content_text,
+               content_url, published_at, view_count, like_count, comment_count, repost_count,
+               created_at
+        FROM collect_posts
+        WHERE task_id = #{taskId} AND platform = #{platform}
+        ORDER BY published_at DESC, id DESC
+    </select>
+
+    <select id="selectDisplayRecordsByStepKey" resultType="java.util.HashMap">
+        SELECT id, step_key, record_title, platform, account_id, display_fields
+        FROM collect_display_records
+        WHERE task_id = #{taskId} AND step_key = #{stepKey}
+        ORDER BY id ASC
+    </select>
+
+    <!-- 03/04 等：展示层写在子步骤 step3_profile_* / step3_post_* / step7_post_* -->
+    <select id="selectDisplayRecordsByStepKeyPrefix" resultType="java.util.HashMap">
+        SELECT id, step_key, record_title, platform, account_id, display_fields
+        FROM collect_display_records
+        WHERE task_id = #{taskId} AND step_key LIKE CONCAT(#{stepKeyPrefix}, '%')
+        ORDER BY id ASC
+    </select>
+
+    <!-- 演示假数据：全局按 step_key，不依赖 task_id -->
+    <select id="selectDemoRecordsByStepKey" resultType="java.util.HashMap">
+        SELECT id, step_key, record_title, account_id, display_fields, sort_order
+        FROM collect_step_demo_records
+        WHERE step_key = #{stepKey} AND enabled = 1
+        ORDER BY sort_order ASC, id ASC
+    </select>
+
+    <!-- 历史详情/终稿：cancelled > summary > user_input（对齐 /api/dialogues） -->
+    <select id="selectLatestAssistantReply" resultType="java.util.HashMap">
+        SELECT content, created_at, msg_type, report_tags
+        FROM hermes_user_dialogues
+        WHERE task_id = #{taskId}
+          AND msg_type IN ('cancelled', 'summary', 'user_input')
+        ORDER BY
+            CASE msg_type
+                WHEN 'cancelled' THEN 0
+                WHEN 'summary' THEN 1
+                WHEN 'user_input' THEN 2
+                ELSE 9
+            END,
+            id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 历史问答删除：按 task_id 清业务子表，最后删 hermes_tasks -->
+    <delete id="deleteCollectImagesByTaskId">
+        DELETE FROM collect_images WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteCollectDisplayRecordsByTaskId">
+        DELETE FROM collect_display_records WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteCollectIdentityStreamsByTaskId">
+        DELETE FROM collect_identity_streams WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteCollectPhaseStepsByTaskId">
+        DELETE FROM collect_phase_steps WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteCollectPostsByTaskId">
+        DELETE FROM collect_posts WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteCollectProfilesByTaskId">
+        DELETE FROM collect_profiles WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteCollectTaskSummariesByTaskId">
+        DELETE FROM collect_task_summaries WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteCollectValidatedAccountsByTaskId">
+        DELETE FROM collect_validated_accounts WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteCollectOsintHitsByTaskId">
+        DELETE FROM collect_osint_hits WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteCrossPlatformCandidatesByTaskId">
+        DELETE FROM cross_platform_candidates WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteHermesToolOutputsByTaskId">
+        DELETE FROM hermes_tool_outputs WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteHermesUserDialoguesByTaskId">
+        DELETE FROM hermes_user_dialogues WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteHermesTaskById">
+        DELETE FROM hermes_tasks WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteAllPhaseStepsByTaskId">
+        DELETE FROM collect_phase_steps WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deletePhaseStepsNotIn">
+        DELETE FROM collect_phase_steps
+        WHERE task_id = #{taskId}
+        <if test="keepKeys != null and keepKeys.size() &gt; 0">
+            AND step_key NOT IN
+            <foreach collection="keepKeys" item="k" open="(" separator="," close=")">
+                #{k}
+            </foreach>
+        </if>
+    </delete>
+
+    <insert id="upsertPhaseStepMeta">
+        INSERT INTO collect_phase_steps
+            (task_id, step_key, parent_step_key, step_order, step_node, title, status)
+        VALUES
+            (#{taskId}, #{stepKey}, #{parentStepKey}, #{stepOrder}, #{stepNode}, #{title}, 'pending')
+        ON DUPLICATE KEY UPDATE
+            parent_step_key = VALUES(parent_step_key),
+            step_order = VALUES(step_order),
+            step_node = VALUES(step_node),
+            title = VALUES(title),
+            updated_at = NOW(3)
+    </insert>
+
+    <update id="updatePhaseStepLifecycle">
+        UPDATE collect_phase_steps
+        SET status = #{status},
+            message = #{message},
+            started_at = CASE
+                WHEN #{status} = 'running' THEN COALESCE(started_at, NOW(3))
+                ELSE started_at
+            END,
+            finished_at = CASE
+                WHEN #{status} = 'running' THEN NULL
+                WHEN #{status} = 'pending' THEN NULL
+                WHEN #{status} IN ('completed', 'failed', 'skipped')
+                    THEN COALESCE(finished_at, NOW(3))
+                ELSE finished_at
+            END,
+            updated_at = NOW(3)
+        WHERE task_id = #{taskId} AND step_key = #{stepKey}
+    </update>
+
+</mapper>

@@ -1,0 +1,175 @@
+{
+  "抽取说明": "对检索命中的网页去掉导航、侧栏、广告与推荐模块，只保留标题、作者、发布时间、正文和关键段落，供后续观点归纳与身份线索使用。",
+  "目标账号": "@whyyoutouzhele",
+  "抽取页数": 4,
+  "页面抽取列表": [
+    [
+      {
+        "label": "来源URL",
+        "value": "https://whyyoutouzhele.wordpress.com/"
+      },
+      {
+        "label": "页面标题",
+        "value": "李老师不是你老师"
+      },
+      {
+        "label": "作者",
+        "value": "whyyoutouzhele"
+      },
+      {
+        "label": "发布时间",
+        "value": "2024-03-12 09:20:00"
+      },
+      {
+        "label": "站点类型",
+        "value": "个人站点 / WordPress"
+      },
+      {
+        "label": "去除噪声",
+        "value": "已剔除顶部导航、订阅栏、相关文章推荐与页脚版权"
+      },
+      {
+        "label": "正文长度",
+        "value": "1860"
+      },
+      {
+        "label": "关键段落",
+        "value": "本站用于备份公开投稿与时政资讯摘要；联系方式以 Twitter @whyyoutouzhele 为准。"
+      },
+      {
+        "label": "正文",
+        "value": "「李老师不是你老师」是一个面向中文读者的公开资讯账号。内容主要来自网友投稿，覆盖灾害事故、劳动维权、教育体制与社会事件。站点仅作网页备份，不替代社交平台实时更新。投稿请注明时间、地点与可核验线索。"
+      },
+      {
+        "label": "抽取状态",
+        "value": "成功"
+      }
+    ],
+    [
+      {
+        "label": "来源URL",
+        "value": "https://www.youtube.com/@whyyoutouzhele/about"
+      },
+      {
+        "label": "页面标题",
+        "value": "李老师不是你老师 - 频道简介"
+      },
+      {
+        "label": "作者",
+        "value": "李老师不是你老师"
+      },
+      {
+        "label": "发布时间",
+        "value": "2023-04-26 00:00:00"
+      },
+      {
+        "label": "站点类型",
+        "value": "YouTube 关于页"
+      },
+      {
+        "label": "去除噪声",
+        "value": "已剔除订阅按钮区、推荐频道、评论预览与广告条"
+      },
+      {
+        "label": "正文长度",
+        "value": "420"
+      },
+      {
+        "label": "关键段落",
+        "value": "频道同步发布「雪花每日新闻」等时政资讯视频；外链指向 Twitter 与个人站点。"
+      },
+      {
+        "label": "正文",
+        "value": "本频道发布中文时政剪辑与每日新闻综述。部分节目以「雪花每日新闻」为固定栏目。联系与投稿请前往 Twitter @whyyoutouzhele。频道创建于 2023 年。"
+      },
+      {
+        "label": "抽取状态",
+        "value": "成功"
+      }
+    ],
+    [
+      {
+        "label": "来源URL",
+        "value": "https://twitter.com/whyyoutouzhele"
+      },
+      {
+        "label": "页面标题",
+        "value": "李老师不是你老师 (@whyyoutouzhele)"
+      },
+      {
+        "label": "作者",
+        "value": "李老师不是你老师"
+      },
+      {
+        "label": "发布时间",
+        "value": ""
+      },
+      {
+        "label": "站点类型",
+        "value": "社交主页"
+      },
+      {
+        "label": "去除噪声",
+        "value": "已剔除关注推荐、趋势栏、谁在关注与登录弹窗文案"
+      },
+      {
+        "label": "正文长度",
+        "value": "96"
+      },
+      {
+        "label": "关键段落",
+        "value": "网友投稿账号；同步备份站点 whyyoutouzhele.wordpress.com。"
+      },
+      {
+        "label": "正文",
+        "value": "李老师不是你老师。接受公开投稿，关注中国境内灾害、维权与社会事件。站点：https://whyyoutouzhele.wordpress.com/"
+      },
+      {
+        "label": "抽取状态",
+        "value": "成功"
+      }
+    ],
+    [
+      {
+        "label": "来源URL",
+        "value": "https://t.me/whyyoutouzhele"
+      },
+      {
+        "label": "页面标题",
+        "value": "李老师不是你老师"
+      },
+      {
+        "label": "作者",
+        "value": "whyyoutouzhele"
+      },
+      {
+        "label": "发布时间",
+        "value": ""
+      },
+      {
+        "label": "站点类型",
+        "value": "Telegram 频道简介页"
+      },
+      {
+        "label": "去除噪声",
+        "value": "已剔除加入按钮周边文案、相关频道推荐"
+      },
+      {
+        "label": "正文长度",
+        "value": "210"
+      },
+      {
+        "label": "关键段落",
+        "value": "Telegram 为同步分发渠道，正文以投稿摘要为主，指向 Twitter 原帖。"
+      },
+      {
+        "label": "正文",
+        "value": "本频道同步「李老师不是你老师」公开资讯。内容以网友投稿摘要为主，完整线索与讨论见 Twitter @whyyoutouzhele。"
+      },
+      {
+        "label": "抽取状态",
+        "value": "成功"
+      }
+    ]
+  ]
+}

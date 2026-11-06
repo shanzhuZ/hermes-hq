@@ -1,0 +1,403 @@
+{
+  "目标账号": "@whyyoutouzhele",
+  "抽取结论": [
+    {
+      "label": "中心账号",
+      "value": "@whyyoutouzhele（李老师不是你老师）"
+    },
+    {
+      "label": "边数量",
+      "value": "10"
+    },
+    {
+      "label": "边类型分布",
+      "value": "同一人多号 3；官方分发互链 1；回复互动 4；粉丝关注 2"
+    },
+    {
+      "label": "结论说明",
+      "value": "先落可追溯边：矩阵号（YouTube/Telegram/小号）用外链与同名互证；互动边用来自真实回复列表的评论；关注边来自粉丝列表。不做无证据连线。"
+    }
+  ],
+  "边列表": [
+    [
+      {
+        "label": "边ID",
+        "value": "EDGE-001"
+      },
+      {
+        "label": "源账号",
+        "value": "@whyyoutouzhele"
+      },
+      {
+        "label": "目标账号",
+        "value": "YouTube UCrMjr7dY8syS_m9TdqM-g_Q"
+      },
+      {
+        "label": "边类型",
+        "value": "同一人多号"
+      },
+      {
+        "label": "方向",
+        "value": "双向"
+      },
+      {
+        "label": "证据说明",
+        "value": "同名「李老师不是你老师」、同风格手绘猫头像、Maigret 命中 YouTube handle whyyoutouzhele；频道简介与 Twitter 互引。"
+      },
+      {
+        "label": "证据链接",
+        "value": "https://www.youtube.com/@whyyoutouzhele/about"
+      },
+      {
+        "label": "证据时间",
+        "value": "2026-08-13"
+      },
+      {
+        "label": "置信度",
+        "value": "0.94"
+      }
+    ],
+    [
+      {
+        "label": "边ID",
+        "value": "EDGE-002"
+      },
+      {
+        "label": "源账号",
+        "value": "@whyyoutouzhele"
+      },
+      {
+        "label": "目标账号",
+        "value": "Telegram @lilaoshibushinilaoshi"
+      },
+      {
+        "label": "边类型",
+        "value": "官方分发互链"
+      },
+      {
+        "label": "方向",
+        "value": "双向"
+      },
+      {
+        "label": "证据说明",
+        "value": "Twitter 简介外链指向 https://telegram.me/lilaoshibushinilaoshi；频道发文与种子推文一一对应并反链 x.com/whyyoutouzhele/status/…"
+      },
+      {
+        "label": "证据链接",
+        "value": "https://t.me/lilaoshibushinilaoshi"
+      },
+      {
+        "label": "证据时间",
+        "value": "2026-08-07"
+      },
+      {
+        "label": "置信度",
+        "value": "0.95"
+      }
+    ],
+    [
+      {
+        "label": "边ID",
+        "value": "EDGE-003"
+      },
+      {
+        "label": "源账号",
+        "value": "@whyyoutouzhele"
+      },
+      {
+        "label": "目标账号",
+        "value": "@lilaoshizuikeai"
+      },
+      {
+        "label": "边类型",
+        "value": "同一人多号"
+      },
+      {
+        "label": "方向",
+        "value": "双向"
+      },
+      {
+        "label": "证据说明",
+        "value": "关联 Telegram 资料将其列为 Twitter 小号；昵称 Lee1ng 与本名李颖（Li Ying）拼音吻合；头像同为手绘卡通风格。"
+      },
+      {
+        "label": "证据链接",
+        "value": "https://x.com/lilaoshizuikeai"
+      },
+      {
+        "label": "证据时间",
+        "value": "2026-08-13"
+      },
+      {
+        "label": "置信度",
+        "value": "0.88"
+      }
+    ],
+    [
+      {
+        "label": "边ID",
+        "value": "EDGE-004"
+      },
+      {
+        "label": "源账号",
+        "value": "@scscsc002"
+      },
+      {
+        "label": "目标账号",
+        "value": "@whyyoutouzhele"
+      },
+      {
+        "label": "边类型",
+        "value": "回复"
+      },
+      {
+        "label": "方向",
+        "value": "指向中心账号"
+      },
+      {
+        "label": "证据说明",
+        "value": "回复推文 2087771126776676463（朱镕基/焦点访谈相关）。回复ID 2087773073873236111。"
+      },
+      {
+        "label": "证据链接",
+        "value": "https://x.com/scscsc002/status/2087773073873236111"
+      },
+      {
+        "label": "证据时间",
+        "value": "Thu Aug 13 05:27:44 +0000 2026"
+      },
+      {
+        "label": "置信度",
+        "value": "0.99"
+      }
+    ],
+    [
+      {
+        "label": "边ID",
+        "value": "EDGE-005"
+      },
+      {
+        "label": "源账号",
+        "value": "@Ostrichpku"
+      },
+      {
+        "label": "目标账号",
+        "value": "@whyyoutouzhele"
+      },
+      {
+        "label": "边类型",
+        "value": "回复"
+      },
+      {
+        "label": "方向",
+        "value": "指向中心账号"
+      },
+      {
+        "label": "证据说明",
+        "value": "同一主帖下回复，讨论自由开放与市场法治；回复ID 2087773508428571010。"
+      },
+      {
+        "label": "证据链接",
+        "value": "https://x.com/Ostrichpku/status/2087773508428571010"
+      },
+      {
+        "label": "证据时间",
+        "value": "Thu Aug 13 05:29:28 +0000 2026"
+      },
+      {
+        "label": "置信度",
+        "value": "0.99"
+      }
+    ],
+    [
+      {
+        "label": "边ID",
+        "value": "EDGE-006"
+      },
+      {
+        "label": "源账号",
+        "value": "@kkvpn2024"
+      },
+      {
+        "label": "目标账号",
+        "value": "@whyyoutouzhele"
+      },
+      {
+        "label": "边类型",
+        "value": "回复"
+      },
+      {
+        "label": "方向",
+        "value": "指向中心账号"
+      },
+      {
+        "label": "证据说明",
+        "value": "回复主帖并评论国企改革与失业议题；回复ID 2087773325414342785。"
+      },
+      {
+        "label": "证据链接",
+        "value": "https://x.com/kkvpn2024/status/2087773325414342785"
+      },
+      {
+        "label": "证据时间",
+        "value": "Thu Aug 13 05:28:44 +0000 2026"
+      },
+      {
+        "label": "置信度",
+        "value": "0.99"
+      }
+    ],
+    [
+      {
+        "label": "边ID",
+        "value": "EDGE-007"
+      },
+      {
+        "label": "源账号",
+        "value": "@minjian84628137"
+      },
+      {
+        "label": "目标账号",
+        "value": "@whyyoutouzhele"
+      },
+      {
+        "label": "边类型",
+        "value": "回复"
+      },
+      {
+        "label": "方向",
+        "value": "指向中心账号"
+      },
+      {
+        "label": "证据说明",
+        "value": "同一主帖评论区互动；回复ID 2087776443019219054。"
+      },
+      {
+        "label": "证据链接",
+        "value": "https://x.com/minjian84628137/status/2087776443019219054"
+      },
+      {
+        "label": "证据时间",
+        "value": "Thu Aug 13 05:41:07 +0000 2026"
+      },
+      {
+        "label": "置信度",
+        "value": "0.99"
+      }
+    ],
+    [
+      {
+        "label": "边ID",
+        "value": "EDGE-008"
+      },
+      {
+        "label": "源账号",
+        "value": "@torontobigface"
+      },
+      {
+        "label": "目标账号",
+        "value": "@whyyoutouzhele"
+      },
+      {
+        "label": "边类型",
+        "value": "粉丝"
+      },
+      {
+        "label": "方向",
+        "value": "关注中心账号"
+      },
+      {
+        "label": "证据说明",
+        "value": "出现在种子账号粉丝列表：用户ID 1477342523555135490，显示名「多伦多方脸」，蓝V。"
+      },
+      {
+        "label": "证据链接",
+        "value": "https://x.com/torontobigface"
+      },
+      {
+        "label": "证据时间",
+        "value": "2026-08-13"
+      },
+      {
+        "label": "置信度",
+        "value": "0.97"
+      }
+    ],
+    [
+      {
+        "label": "边ID",
+        "value": "EDGE-009"
+      },
+      {
+        "label": "源账号",
+        "value": "@lidangzzz"
+      },
+      {
+        "label": "目标账号",
+        "value": "@whyyoutouzhele"
+      },
+      {
+        "label": "边类型",
+        "value": "粉丝"
+      },
+      {
+        "label": "方向",
+        "value": "关注中心账号"
+      },
+      {
+        "label": "证据说明",
+        "value": "出现在种子账号粉丝列表：用户ID 28940967，显示名 lidang 立党。"
+      },
+      {
+        "label": "证据链接",
+        "value": "https://x.com/lidangzzz"
+      },
+      {
+        "label": "证据时间",
+        "value": "2026-08-13"
+      },
+      {
+        "label": "置信度",
+        "value": "0.97"
+      }
+    ],
+    [
+      {
+        "label": "边ID",
+        "value": "EDGE-010"
+      },
+      {
+        "label": "源账号",
+        "value": "@whyyoutouzhele"
+      },
+      {
+        "label": "目标账号",
+        "value": "GitHub whyyoutouzhele"
+      },
+      {
+        "label": "边类型",
+        "value": "同名占位"
+      },
+      {
+        "label": "方向",
+        "value": "弱关联"
+      },
+      {
+        "label": "证据说明",
+        "value": "Maigret 命中 GitHub whyyoutouzhele，但仓库/Gist 为空壳，仅作同名候选，不升格为同一人强边。"
+      },
+      {
+        "label": "证据链接",
+        "value": "https://github.com/whyyoutouzhele"
+      },
+      {
+        "label": "证据时间",
+        "value": "2026-08-13 14:40:05"
+      },
+      {
+        "label": "置信度",
+        "value": "0.40"
+      }
+    ]
+  ]
+}

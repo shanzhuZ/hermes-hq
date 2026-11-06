@@ -1,0 +1,314 @@
+{
+  "目标账号": "@whyyoutouzhele",
+  "抽取结论": [
+    {
+      "label": "节点数",
+      "value": "11"
+    },
+    {
+      "label": "边数",
+      "value": "10"
+    },
+    {
+      "label": "社区数",
+      "value": "4"
+    },
+    {
+      "label": "社区划分",
+      "value": "本人矩阵 / 评论互动圈 / 关注放大圈 / 同名待核验"
+    },
+    {
+      "label": "桥接账号",
+      "value": "@whyyoutouzhele（连接全部社区的唯一枢纽）"
+    },
+    {
+      "label": "图结构",
+      "value": "星型：中心为种子账号；矩阵号在内侧强边，回复与粉丝在外侧弱/中等边"
+    },
+    {
+      "label": "构图摘要",
+      "value": "以 @whyyoutouzhele 为中心：内侧由 YouTube、Telegram、小号 @lilaoshizuikeai 构成本人分发矩阵；外侧评论区 4 个回复账号形成互动圈；@torontobigface、@lidangzzz 构成关注放大圈；GitHub 同名账号单独放在待核验社区，避免画成强同一人。"
+    }
+  ],
+  "社区列表": [
+    [
+      {
+        "label": "社区ID",
+        "value": "C1"
+      },
+      {
+        "label": "社区名称",
+        "value": "本人矩阵"
+      },
+      {
+        "label": "成员",
+        "value": "@whyyoutouzhele；YouTube UCrMjr7dY8syS_m9TdqM-g_Q；Telegram @lilaoshibushinilaoshi；@lilaoshizuikeai"
+      },
+      {
+        "label": "成员数",
+        "value": "4"
+      },
+      {
+        "label": "主导边类型",
+        "value": "同一人多号 / 官方分发互链"
+      }
+    ],
+    [
+      {
+        "label": "社区ID",
+        "value": "C2"
+      },
+      {
+        "label": "社区名称",
+        "value": "评论互动圈"
+      },
+      {
+        "label": "成员",
+        "value": "@scscsc002；@Ostrichpku；@kkvpn2024；@minjian84628137"
+      },
+      {
+        "label": "成员数",
+        "value": "4"
+      },
+      {
+        "label": "主导边类型",
+        "value": "回复"
+      }
+    ],
+    [
+      {
+        "label": "社区ID",
+        "value": "C3"
+      },
+      {
+        "label": "社区名称",
+        "value": "关注放大圈"
+      },
+      {
+        "label": "成员",
+        "value": "@torontobigface；@lidangzzz"
+      },
+      {
+        "label": "成员数",
+        "value": "2"
+      },
+      {
+        "label": "主导边类型",
+        "value": "粉丝"
+      }
+    ],
+    [
+      {
+        "label": "社区ID",
+        "value": "C4"
+      },
+      {
+        "label": "社区名称",
+        "value": "同名待核验"
+      },
+      {
+        "label": "成员",
+        "value": "GitHub whyyoutouzhele"
+      },
+      {
+        "label": "成员数",
+        "value": "1"
+      },
+      {
+        "label": "主导边类型",
+        "value": "同名占位"
+      }
+    ]
+  ],
+  "图节点列表": [
+    [
+      {"label": "节点ID", "value": "N1"},
+      {"label": "账号", "value": "@whyyoutouzhele"},
+      {"label": "显示名", "value": "李老师不是你老师"},
+      {"label": "角色", "value": "中心 / 桥接"},
+      {"label": "社区ID", "value": "C1"},
+      {"label": "度数", "value": "10"}
+    ],
+    [
+      {"label": "节点ID", "value": "N2"},
+      {"label": "账号", "value": "YouTube UCrMjr7dY8syS_m9TdqM-g_Q"},
+      {"label": "显示名", "value": "李老师不是你老师"},
+      {"label": "角色", "value": "矩阵-视频分发"},
+      {"label": "社区ID", "value": "C1"},
+      {"label": "度数", "value": "1"}
+    ],
+    [
+      {"label": "节点ID", "value": "N3"},
+      {"label": "账号", "value": "Telegram @lilaoshibushinilaoshi"},
+      {"label": "显示名", "value": "【李老师不是你老师】官方电报"},
+      {"label": "角色", "value": "矩阵-镜像分发"},
+      {"label": "社区ID", "value": "C1"},
+      {"label": "度数", "value": "1"}
+    ],
+    [
+      {"label": "节点ID", "value": "N4"},
+      {"label": "账号", "value": "@lilaoshizuikeai"},
+      {"label": "显示名", "value": "Lee1ng"},
+      {"label": "角色", "value": "矩阵-Twitter小号"},
+      {"label": "社区ID", "value": "C1"},
+      {"label": "度数", "value": "1"}
+    ],
+    [
+      {"label": "节点ID", "value": "N5"},
+      {"label": "账号", "value": "@scscsc002"},
+      {"label": "显示名", "value": "@scscsc002"},
+      {"label": "角色", "value": "评论互动"},
+      {"label": "社区ID", "value": "C2"},
+      {"label": "度数", "value": "1"}
+    ],
+    [
+      {"label": "节点ID", "value": "N6"},
+      {"label": "账号", "value": "@Ostrichpku"},
+      {"label": "显示名", "value": "@Ostrichpku"},
+      {"label": "角色", "value": "评论互动"},
+      {"label": "社区ID", "value": "C2"},
+      {"label": "度数", "value": "1"}
+    ],
+    [
+      {"label": "节点ID", "value": "N7"},
+      {"label": "账号", "value": "@kkvpn2024"},
+      {"label": "显示名", "value": "@kkvpn2024"},
+      {"label": "角色", "value": "评论互动"},
+      {"label": "社区ID", "value": "C2"},
+      {"label": "度数", "value": "1"}
+    ],
+    [
+      {"label": "节点ID", "value": "N8"},
+      {"label": "账号", "value": "@minjian84628137"},
+      {"label": "显示名", "value": "@minjian84628137"},
+      {"label": "角色", "value": "评论互动"},
+      {"label": "社区ID", "value": "C2"},
+      {"label": "度数", "value": "1"}
+    ],
+    [
+      {"label": "节点ID", "value": "N9"},
+      {"label": "账号", "value": "@torontobigface"},
+      {"label": "显示名", "value": "多伦多方脸"},
+      {"label": "角色", "value": "关注放大"},
+      {"label": "社区ID", "value": "C3"},
+      {"label": "度数", "value": "1"}
+    ],
+    [
+      {"label": "节点ID", "value": "N10"},
+      {"label": "账号", "value": "@lidangzzz"},
+      {"label": "显示名", "value": "lidang 立党"},
+      {"label": "角色", "value": "关注放大"},
+      {"label": "社区ID", "value": "C3"},
+      {"label": "度数", "value": "1"}
+    ],
+    [
+      {"label": "节点ID", "value": "N11"},
+      {"label": "账号", "value": "GitHub whyyoutouzhele"},
+      {"label": "显示名", "value": "whyyoutouzhele"},
+      {"label": "角色", "value": "同名待核验"},
+      {"label": "社区ID", "value": "C4"},
+      {"label": "度数", "value": "1"}
+    ]
+  ],
+  "图边列表": [
+    [
+      {"label": "边ID", "value": "EDGE-001"},
+      {"label": "源节点ID", "value": "N1"},
+      {"label": "目标节点ID", "value": "N2"},
+      {"label": "边类型", "value": "同一人多号"},
+      {"label": "权重", "value": "0.94"}
+    ],
+    [
+      {"label": "边ID", "value": "EDGE-002"},
+      {"label": "源节点ID", "value": "N1"},
+      {"label": "目标节点ID", "value": "N3"},
+      {"label": "边类型", "value": "官方分发互链"},
+      {"label": "权重", "value": "0.95"}
+    ],
+    [
+      {"label": "边ID", "value": "EDGE-003"},
+      {"label": "源节点ID", "value": "N1"},
+      {"label": "目标节点ID", "value": "N4"},
+      {"label": "边类型", "value": "同一人多号"},
+      {"label": "权重", "value": "0.88"}
+    ],
+    [
+      {"label": "边ID", "value": "EDGE-004"},
+      {"label": "源节点ID", "value": "N5"},
+      {"label": "目标节点ID", "value": "N1"},
+      {"label": "边类型", "value": "回复"},
+      {"label": "权重", "value": "0.99"}
+    ],
+    [
+      {"label": "边ID", "value": "EDGE-005"},
+      {"label": "源节点ID", "value": "N6"},
+      {"label": "目标节点ID", "value": "N1"},
+      {"label": "边类型", "value": "回复"},
+      {"label": "权重", "value": "0.99"}
+    ],
+    [
+      {"label": "边ID", "value": "EDGE-006"},
+      {"label": "源节点ID", "value": "N7"},
+      {"label": "目标节点ID", "value": "N1"},
+      {"label": "边类型", "value": "回复"},
+      {"label": "权重", "value": "0.99"}
+    ],
+    [
+      {"label": "边ID", "value": "EDGE-007"},
+      {"label": "源节点ID", "value": "N8"},
+      {"label": "目标节点ID", "value": "N1"},
+      {"label": "边类型", "value": "回复"},
+      {"label": "权重", "value": "0.99"}
+    ],
+    [
+      {"label": "边ID", "value": "EDGE-008"},
+      {"label": "源节点ID", "value": "N9"},
+      {"label": "目标节点ID", "value": "N1"},
+      {"label": "边类型", "value": "粉丝"},
+      {"label": "权重", "value": "0.97"}
+    ],
+    [
+      {"label": "边ID", "value": "EDGE-009"},
+      {"label": "源节点ID", "value": "N10"},
+      {"label": "目标节点ID", "value": "N1"},
+      {"label": "边类型", "value": "粉丝"},
+      {"label": "权重", "value": "0.97"}
+    ],
+    [
+      {"label": "边ID", "value": "EDGE-010"},
+      {"label": "源节点ID", "value": "N1"},
+      {"label": "目标节点ID", "value": "N11"},
+      {"label": "边类型", "value": "同名占位"},
+      {"label": "权重", "value": "0.40"}
+    ]
+  ],
+  "可视化导出": {
+    "layout": "force",
+    "centerNodeId": "N1",
+    "nodes": [
+      {"id": "N1", "name": "@whyyoutouzhele", "community": "C1", "role": "中心", "symbolSize": 48},
+      {"id": "N2", "name": "YouTube", "community": "C1", "role": "矩阵", "symbolSize": 28},
+      {"id": "N3", "name": "Telegram", "community": "C1", "role": "矩阵", "symbolSize": 28},
+      {"id": "N4", "name": "@lilaoshizuikeai", "community": "C1", "role": "矩阵", "symbolSize": 24},
+      {"id": "N5", "name": "@scscsc002", "community": "C2", "role": "回复", "symbolSize": 16},
+      {"id": "N6", "name": "@Ostrichpku", "community": "C2", "role": "回复", "symbolSize": 16},
+      {"id": "N7", "name": "@kkvpn2024", "community": "C2", "role": "回复", "symbolSize": 16},
+      {"id": "N8", "name": "@minjian84628137", "community": "C2", "role": "回复", "symbolSize": 16},
+      {"id": "N9", "name": "@torontobigface", "community": "C3", "role": "粉丝", "symbolSize": 20},
+      {"id": "N10", "name": "@lidangzzz", "community": "C3", "role": "粉丝", "symbolSize": 20},
+      {"id": "N11", "name": "GitHub", "community": "C4", "role": "待核验", "symbolSize": 14}
+    ],
+    "links": [
+      {"source": "N1", "target": "N2", "type": "同一人多号", "weight": 0.94},
+      {"source": "N1", "target": "N3", "type": "官方分发互链", "weight": 0.95},
+      {"source": "N1", "target": "N4", "type": "同一人多号", "weight": 0.88},
+      {"source": "N5", "target": "N1", "type": "回复", "weight": 0.99},
+      {"source": "N6", "target": "N1", "type": "回复", "weight": 0.99},
+      {"source": "N7", "target": "N1", "type": "回复", "weight": 0.99},
+      {"source": "N8", "target": "N1", "type": "回复", "weight": 0.99},
+      {"source": "N9", "target": "N1", "type": "粉丝", "weight": 0.97},
+      {"source": "N10", "target": "N1", "type": "粉丝", "weight": 0.97},
+      {"source": "N1", "target": "N11", "type": "同名占位", "weight": 0.40}
+    ]
+  }
+}

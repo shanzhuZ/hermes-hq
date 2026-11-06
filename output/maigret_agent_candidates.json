@@ -1,0 +1,179 @@
+{
+  "标题": "Maigret Agent 跨平台收集",
+  "状态": "completed",
+  "状态说明": "结论明确",
+  "消息": "Maigret 发现 5 个候选",
+  "候选账号总数": 5,
+  "候选账号列表": [
+    [
+      {
+        "label": "记录ID",
+        "value": "2260"
+      },
+      {
+        "label": "记录标题",
+        "value": "YouTube · whyyoutouzhele"
+      },
+      {
+        "label": "平台",
+        "value": "YouTube"
+      },
+      {
+        "label": "账号",
+        "value": "whyyoutouzhele"
+      },
+      {
+        "label": "账号ID",
+        "value": "UCrMjr7dY8syS_m9TdqM-g_Q"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-08-13 14:40:03.307000"
+      }
+    ],
+    [
+      {
+        "label": "记录ID",
+        "value": "2261"
+      },
+      {
+        "label": "记录标题",
+        "value": "memorylol · whyyoutouzhele"
+      },
+      {
+        "label": "平台",
+        "value": "memorylol"
+      },
+      {
+        "label": "账号",
+        "value": "whyyoutouzhele"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://api.memory.lol/v1/tw/whyyoutouzhele"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-08-13 14:40:03.969000"
+      }
+    ],
+    [
+      {
+        "label": "记录ID",
+        "value": "2262"
+      },
+      {
+        "label": "记录标题",
+        "value": "imginn · whyyoutouzhele"
+      },
+      {
+        "label": "平台",
+        "value": "imginn"
+      },
+      {
+        "label": "账号",
+        "value": "whyyoutouzhele"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://imginn.com/whyyoutouzhele/"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-08-13 14:40:04.672000"
+      }
+    ],
+    [
+      {
+        "label": "记录ID",
+        "value": "2263"
+      },
+      {
+        "label": "记录标题",
+        "value": "Instagram · whyyoutouzhele"
+      },
+      {
+        "label": "平台",
+        "value": "Instagram"
+      },
+      {
+        "label": "账号",
+        "value": "whyyoutouzhele"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://www.instagram.com/whyyoutouzhele/"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-08-13 14:40:05.282000"
+      }
+    ],
+    [
+      {
+        "label": "记录ID",
+        "value": "2264"
+      },
+      {
+        "label": "记录标题",
+        "value": "GitHub · whyyoutouzhele"
+      },
+      {
+        "label": "平台",
+        "value": "GitHub"
+      },
+      {
+        "label": "账号",
+        "value": "whyyoutouzhele"
+      },
+      {
+        "label": "账号ID",
+        "value": "whyyoutouzhele"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-08-13 14:40:05.931000"
+      }
+    ]
+  ]
+}

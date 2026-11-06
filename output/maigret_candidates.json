@@ -1,0 +1,247 @@
+{
+  "匹配策略": "maigret",
+  "候选账号列表": [
+    [
+      {
+        "label": "平台",
+        "value": "wordpress"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://whyyoutouzhele.wordpress.com/"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-07-09 18:29:18.478000"
+      }
+    ],
+    [
+      {
+        "label": "平台",
+        "value": "Twitter"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://twitter.com/whyyoutouzhele"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-07-09 18:29:17.328000"
+      }
+    ],
+    [
+      {
+        "label": "平台",
+        "value": "Instagram"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://www.instagram.com/whyyoutouzhele/"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-07-09 18:29:19.546000"
+      }
+    ],
+    [
+      {
+        "label": "平台",
+        "value": "TikTok"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://www.tiktok.com/@whyyoutouzhele"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-07-09 18:29:20.821000"
+      }
+    ],
+    [
+      {
+        "label": "平台",
+        "value": "YouTube"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://www.youtube.com/@whyyoutouzhele/about"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-07-09 18:29:21.929000"
+      }
+    ],
+    [
+      {
+        "label": "平台",
+        "value": "微博"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://weibo.com/n/whyyoutouzhele"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-07-09 18:29:23.167000"
+      }
+    ],
+    [
+      {
+        "label": "平台",
+        "value": "Telegram"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://t.me/whyyoutouzhele"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-07-09 18:29:24.343000"
+      }
+    ],
+    [
+      {
+        "label": "平台",
+        "value": "imginn"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://imginn.com/whyyoutouzhele/"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-07-09 18:29:25.420000"
+      }
+    ],
+    [
+      {
+        "label": "平台",
+        "value": "GitHub"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://gist.github.com/whyyoutouzhele"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-07-09 18:29:26.635000"
+      }
+    ],
+    [
+      {
+        "label": "平台",
+        "value": "Twitter"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://www.pixwox.com/profile/whyyoutouzhele/"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-07-09 18:29:27.721000"
+      }
+    ],
+    [
+      {
+        "label": "平台",
+        "value": "picuki"
+      },
+      {
+        "label": "账号ID",
+        "value": "https://www.tikvib.com/profile/whyyoutouzhele"
+      },
+      {
+        "label": "匹配策略",
+        "value": "maigret"
+      },
+      {
+        "label": "状态",
+        "value": "候选"
+      },
+      {
+        "label": "发现时间",
+        "value": "2026-07-09 18:29:28.912000"
+      }
+    ]
+  ]
+}

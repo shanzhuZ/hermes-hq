@@ -1,0 +1,33 @@
+{
+  "_doc": "hermes-hq 04公开资料核查：step_plan + 六大父壳旁白（v3）。",
+  "phases": {
+    "step_plan": {
+      "running_content": "正在拆解核查路径：主账号、Maigret、认定、公开信息备料、发文与成稿…",
+      "completed_content": "执行计划已就绪：六大阶段已排定，转入主账号采集。"
+    },
+    "phase_lock_target": {
+      "running_content": "正在采集用户指定的主账号主页…",
+      "completed_content": "主账号主页已锚定。"
+    },
+    "phase_discovery": {
+      "running_content": "正在用 Maigret 检索跨平台账号线索…",
+      "completed_content": "跨平台候选账号清单已成型。"
+    },
+    "phase_identity": {
+      "running_content": "正在认定哪些账号属于同一人（可采候选主页佐证）…",
+      "completed_content": "账号认定完成，发文对象边界已厘清。"
+    },
+    "phase_web_intel": {
+      "running_content": "正在按八章模板检索公开网页资料（不为扩账号）…",
+      "completed_content": "公开信息备料完成。"
+    },
+    "phase_content": {
+      "running_content": "正在采集已认定账号的公开发文样本…",
+      "completed_content": "全账号发文样本已入库。"
+    },
+    "phase_report": {
+      "running_content": "正在编制公开资料核查报告（八章模板）…",
+      "completed_content": "公开资料核查报告已成稿。"
+    }
+  }
+}

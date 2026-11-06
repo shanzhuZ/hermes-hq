@@ -1,0 +1,64 @@
+# hermes-hq 04 公开资料核查 — 唯一参考（Skill 只加载本文件）
+# v3：主账号 → Maigret → 账号认定 → 公开信息检索（仅备料） → 全账号发文 → 八章报告
+version: "3.0.0-hq"
+
+identity: 用户指定的种子账号/人物为唯一目标；禁止把检索结果里的同名他人当种子。
+
+forbidden_always:
+  tools: [clarify, mcp_firecrawl_*]
+  output: [综合画像, 用户画像, 图片资产管线系统未部署, image_pipeline未部署, （终稿完）, 报告完毕]
+
+mandatory_auto_steps:
+  [1_seed, 2_maigret, 3_identity, 4_osint_web, 5_posts, 6_report]
+
+steps:
+  "1_seed":
+    do: |
+      仅采集用户指定的「主账号」主页（MCP 或 Apify），不要扩平台：
+      - twitter → mcp_twitter_get_user_info
+      - weibo → mcp_weibo_get_profile
+      - youtube → mcp_youtube_get_channel_stats(channelId=UC…)
+      - bilibili → mcp_bilibili_get_user_info
+      - instagram/tiktok/telegram/facebook/github/linkedin → Apify 三轮（只取主页）
+      - linkedin → mcp_apify_harvestapi__linkedin_profile_scraper → get_actor_run → get_dataset_items
+    forbid: [get_user_tweets, maigret, web_search, 写八章报告]
+
+  "2_maigret":
+    do: |
+      用主账号 handle 调用 mcp_maigret_collect_accounts 做跨平台账号检索。
+      产出各平台候选 URL/handle 清单；不要在本步写认定结论或八章。
+      禁止用 web_search 代替 Maigret 找账号。
+    forbid: [web_search, 发文工具, 写八章报告]
+
+  "3_identity":
+    do: |
+      账号认定：综合种子主页 + Maigret 候选，输出以 [账号认定结论] 开头的正文。
+      明确哪些账号属于同一人（纳入后续发文），哪些排除（同名/无关）。
+      需要对候选采主页佐证时，可用 MCP/Apify 主页工具（禁止再采种子平台重复一遍）。
+      LinkedIn 候选 → linkedin_profile_scraper → get_actor_run → get_dataset_items。
+      证据不足写「未核实」；本步完成后系统可将已认定账号纳入发文对象。
+    forbid: [web_search 找账号, 写八章报告, terminal]
+
+  "4_osint_web":
+    do: |
+      目标：仅为终稿八章备料；只用 web_search / web_extract / browser_*。
+      【禁止】再用搜索去发现/扩其它社交账号（账号扩展已在步骤2–3完成）。
+      以「已认定人物姓名 + 机构/头衔」为锚，按模板章节拆查询：
+      A 基本情况（教育/履历/家庭） B 在职在岗 C 人脉（公开职业关系）
+      D 政治立场公开表态出处 E 污点劣迹检索 F 演讲/专栏等表达入口（正文采样仍留给步骤5）
+      G 互证素材（供终稿第七章）
+      命中官方/讲者/新闻页再 web_extract；无可靠来源写未核实。
+    forbid: [maigret, 发文工具, 写八章报告, 搜索其它社交账号]
+
+  "5_posts":
+    do: |
+      对步骤3已认定的全部账号调用发文工具（Twitter tweets / YouTube videos /
+      微博 feeds / Apify 发文轮 / LinkedIn posts）。
+      禁止未调工具就宣称发文完成；禁止对未认定账号采帖。
+    forbid: [写八章终稿]
+
+  "6_report":
+    do: |
+      一次输出八章公开资料核查报告（见 Skill 骨架）。
+      综合步骤1–5；第七章写身份核验与综合结论；末附「八、主要来源」。
+    forbid: [在第一章前写步骤元叙述]

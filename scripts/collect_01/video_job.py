@@ -86,12 +86,22 @@ def _video_python() -> str:
     except Exception as exc:
         logger.debug("读取 video2frame python 失败: %s", exc)
 
-    for candidate in (
+    # 本机常见安装路径（Windows）；Linux 走 PATH / sys.executable
+    win_candidates = (
         Path(r"D:/environment/python/python.exe"),
         Path(r"C:/environment/python/python.exe"),
-    ):
-        if candidate.is_file():
-            return str(candidate)
+    )
+    if os.name == "nt":
+        for candidate in win_candidates:
+            if candidate.is_file():
+                return str(candidate)
+    else:
+        import shutil
+
+        for name in ("python3", "python"):
+            found = shutil.which(name)
+            if found:
+                return found
 
     exe = sys.executable
     if "hermes-agent" in exe.replace("\\", "/").lower():

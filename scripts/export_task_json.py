@@ -11,7 +11,11 @@ from pathlib import Path
 import pymysql
 
 TASK_ID = "954dd006-6f6e-44dc-9fe0-d34769980f2b"
-OUT_DIR = Path(r"C:\Users\zhr\Desktop\json与报告-xa")
+# 默认导出到仓库 output/；可用环境变量 HERMES_EXPORT_DIR 覆盖
+OUT_DIR = Path(
+    os.environ.get("HERMES_EXPORT_DIR")
+    or (Path(__file__).resolve().parent.parent / "output" / "json-export")
+)
 
 # 与 clients/hermes-xa/src/main/resources/application.yml 一致
 DB = {

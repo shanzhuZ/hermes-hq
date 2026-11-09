@@ -21,10 +21,17 @@ EVENTS = (
 )
 
 
+def _default_python() -> str:
+    """跨平台默认解释器：优先 HERMES_PYTHON，否则当前进程。"""
+    env_py = (os.environ.get("HERMES_PYTHON") or "").strip()
+    if env_py:
+        return env_py
+    return sys.executable or ("python3" if os.name != "nt" else "python")
+
+
 def _hook_command() -> str:
-    python_exe = os.environ.get("HERMES_PYTHON", r"D:/environment/python/python.exe").strip()
-    sink = (REPO_ROOT / "scripts" / "db_sink.py").as_posix()
-    return f"{python_exe} {sink}"
+    # 写入可跨平台展开的占位符；运行时由 hermes load_config / shell_hooks expandvars
+    return "${HERMES_PYTHON} ${HERMES_HOME}/scripts/db_sink.py"
 
 
 def build_hooks_block() -> str:
@@ -32,8 +39,8 @@ def build_hooks_block() -> str:
     lines = ["hooks:"]
     for ev in EVENTS:
         lines.append(f"  {ev}:")
-        lines.append(f"  - command: {cmd}")
-        lines.append("    timeout: 120")
+        lines.append(f"    - command: {cmd}")
+        lines.append("      timeout: 120")
     lines.append("hooks_auto_accept: true")
     return "\n".join(lines) + "\n"
 
@@ -82,16 +89,25 @@ def patch_allowlist(allowlist_path: Path) -> None:
 
 def _warn_legacy_config() -> None:
     local = os.environ.get("LOCALAPPDATA", "").strip()
-    if not local:
-        return
-    legacy = Path(local) / "hermes" / "config.yaml"
     repo_cfg = REPO_ROOT / "config.yaml"
-    if legacy.is_file() and legacy.resolve() != repo_cfg.resolve():
-        print(
-            f"\n注意：仍存在旧版独立安装配置 {legacy}\n"
-            f"  hermes chat / gateway 仅在设置 HERMES_HOME={REPO_ROOT} 时才会读仓库 config.yaml。\n"
-            f"  请用 .\\scripts\\hermes.ps1 chat，或确认用户环境变量 HERMES_HOME 指向仓库根目录。"
-        )
+    if local:
+        legacy = Path(local) / "hermes" / "config.yaml"
+        if legacy.is_file() and legacy.resolve() != repo_cfg.resolve():
+            print(
+                f"\n注意：仍存在旧版独立安装配置 {legacy}\n"
+                f"  hermes chat / gateway 仅在设置 HERMES_HOME={REPO_ROOT} 时才会读仓库 config.yaml。\n"
+                f"  Windows: .\\scripts\\hermes.ps1 chat\n"
+                f"  Linux:   ./scripts/hermes.sh chat"
+            )
+            return
+    home = os.environ.get("HOME", "").strip()
+    if home:
+        legacy = Path(home) / ".hermes" / "config.yaml"
+        if legacy.is_file() and legacy.resolve() != repo_cfg.resolve():
+            print(
+                f"\n注意：仍存在 ~/.hermes/config.yaml\n"
+                f"  请用 ./scripts/hermes.sh 启动，确保 HERMES_HOME={REPO_ROOT}。"
+            )
 
 
 def main() -> int:

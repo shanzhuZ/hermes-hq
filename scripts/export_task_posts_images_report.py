@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import sys
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -159,9 +161,14 @@ def write_report_docx(content: str, out_path: Path, title: str | None = None) ->
         json.dump(payload, tf, ensure_ascii=False)
         tmp = tf.name
     py_candidates = [
-        r"D:\environment\python\python.exe",
-        "py",
+        os.environ.get("HERMES_PYTHON") or "",
+        sys.executable,
+        r"D:\environment\python\python.exe" if os.name == "nt" else "",
+        "python3",
+        "python",
+        "py" if os.name == "nt" else "",
     ]
+    py_candidates = [p for p in py_candidates if p]
     last_err = None
     try:
         for py in py_candidates:

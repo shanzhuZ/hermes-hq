@@ -5,14 +5,14 @@
     "created_by": null,
     "last_patched_at": null,
     "last_reused_patch_generation": 0,
-    "last_used_at": "2026-11-09T10:04:00.137209+00:00",
-    "last_viewed_at": "2026-11-09T10:04:00.117101+00:00",
+    "last_used_at": "2026-11-09T11:18:23.508474+00:00",
+    "last_viewed_at": "2026-11-09T11:18:23.486325+00:00",
     "patch_count": 0,
     "patch_generation": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 60,
-    "view_count": 60
+    "use_count": 62,
+    "view_count": 62
   },
   "account-intelligence-collect": {
     "archived_at": null,
@@ -75,13 +75,13 @@
     "created_at": "2026-07-09T13:16:55.372354+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-11-09T10:47:55.607087+00:00",
-    "last_viewed_at": "2026-11-09T10:47:55.589869+00:00",
+    "last_used_at": "2026-11-09T11:16:41.915145+00:00",
+    "last_viewed_at": "2026-11-09T11:16:41.883591+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 40,
-    "view_count": 40
+    "use_count": 42,
+    "view_count": 42
   },
   "account-intelligence/account-expansion": {
     "archived_at": null,

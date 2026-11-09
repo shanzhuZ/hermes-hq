@@ -97,7 +97,7 @@ public class HistoryQaQueryService {
     private ThoughtEventMapper thoughtEventMapper;
 
     /** 本地视频根目录，对应 hermes.video.local-dir */
-    @Value("${hermes.video.local-dir:D:/hermes-xa/data/video_bytes}")
+    @Value("${hermes.video.local-dir:data/video_bytes}")
     private String videoLocalDir;
 
     /**
@@ -620,7 +620,7 @@ public class HistoryQaQueryService {
      * 失败只打日志，返回 false，不抛异常。
      */
     private boolean deleteLocalVideoTaskDir(String taskId) {
-        String root = videoLocalDir == null ? "D:/hermes-xa/data/video_bytes" : videoLocalDir.trim();
+        String root = videoLocalDir == null ? "data/video_bytes" : videoLocalDir.trim();
         Path dir = Paths.get(root, taskId);
         if (!Files.exists(dir)) {
             return true;

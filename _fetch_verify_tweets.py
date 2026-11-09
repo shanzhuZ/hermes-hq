@@ -3,11 +3,17 @@ from pathlib import Path
 
 os.environ.setdefault("PYTHONUTF8", "1")
 os.environ.setdefault("PYTHONIOENCODING", "utf-8")
-sys.path.insert(0, "D:/environment/python/Lib/site-packages")
+# 可选：本机 site-packages；Linux 一般无需硬编码
+_extra_site = os.environ.get("HERMES_PYTHON_SITE")
+if _extra_site:
+    sys.path.insert(0, _extra_site)
 
 from twitter_mcp._vendor.twikit import Client  # noqa
 
-COOKIES = Path("C:/Users/zhr/.config/twitter-mcp/cookies.json")
+COOKIES = Path(
+    os.environ.get("TWITTER_COOKIES")
+    or (Path.home() / ".config" / "twitter-mcp" / "cookies.json")
+)
 PROXY = os.environ.get("TWITTER_PROXY") or os.environ.get("HTTPS_PROXY") or None
 
 async def main():
@@ -40,8 +46,8 @@ async def main():
     for t in out:
         if t["id"] in seen: continue
         seen.add(t["id"]); uniq.append(t)
-    Path("D:/hermes-hq/_verify_whyyoutouzhele.json").write_text(
-        json.dumps(uniq, ensure_ascii=False, indent=1), encoding="utf-8")
+    out_path = Path(os.environ.get("HERMES_HOME") or Path(__file__).resolve().parent) / "_verify_whyyoutouzhele.json"
+    out_path.write_text(json.dumps(uniq, ensure_ascii=False, indent=1), encoding="utf-8")
     print("count", len(uniq))
     print("range", uniq[-1]["created_at"], "->", uniq[0]["created_at"])
 

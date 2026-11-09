@@ -8,7 +8,11 @@ import yaml
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-CONFIG_PATH = os.environ.get("HERMES_CONFIG", r"D:\hermes-xa\config.yaml")
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+CONFIG_PATH = os.environ.get(
+    "HERMES_CONFIG",
+    os.environ.get("HERMES_HOME", _REPO_ROOT) + os.sep + "config.yaml",
+)
 
 def resolve_env(value, base_env):
     if not isinstance(value, str):

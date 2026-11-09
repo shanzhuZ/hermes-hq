@@ -18,6 +18,8 @@ _DIRECT_VIDEO_RE = re.compile(
     r"(https?://[^\s\"'<>]+\.(?:mp4|webm|mov|m4v|mkv)(?:\?[^\s\"'<>]*)?)",
     re.I,
 )
+_IMAGE_EXT = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".heic", ".avif")
+_VIDEO_EXT = (".mp4", ".webm", ".m4v", ".mov", ".mkv")
 
 
 def _parse_json(raw: Any) -> Any:
@@ -71,6 +73,40 @@ def _is_youtube(url: str) -> bool:
     )
 
 
+def _path_lower(url: str) -> str:
+    try:
+        return (urlparse(url).path or "").lower()
+    except Exception:
+        return str(url or "").lower()
+
+
+def _is_image_url(url: str) -> bool:
+    """静态图直链（含 Twitter pbs.twimg.com/media/*.jpg），禁止当视频。"""
+    if not url:
+        return False
+    path = _path_lower(url)
+    if any(path.endswith(ext) for ext in _IMAGE_EXT):
+        return True
+    low = str(url).lower()
+    # CDN 查询串前已带扩展名：.../xxx.jpg?name=orig
+    return any(f"{ext}?" in low or f"{ext}&" in low for ext in _IMAGE_EXT)
+
+
+def _is_video_like_url(url: str) -> bool:
+    """可交给下载器的视频线索：YouTube 页 / 视频直链。不含静态图。"""
+    if not url or not str(url).startswith("http"):
+        return False
+    if _is_image_url(url):
+        return False
+    if _is_youtube(url):
+        return True
+    path = _path_lower(url)
+    if any(path.endswith(ext) for ext in _VIDEO_EXT):
+        return True
+    low = str(url).lower()
+    return any(f"{ext}?" in low or f"{ext}&" in low for ext in _VIDEO_EXT)
+
+
 def _urls_from_text(text: str) -> List[str]:
     out: List[str] = []
     if not text:
@@ -79,7 +115,47 @@ def _urls_from_text(text: str) -> List[str]:
         out.append(m.group(1).rstrip(").,;]}"))
     for m in _DIRECT_VIDEO_RE.finditer(text):
         out.append(m.group(1).rstrip(").,;]}"))
-    return out
+    return [u for u in out if _is_video_like_url(u)]
+
+
+def _media_types_hint(*blobs: Any) -> List[str]:
+    """从 raw / media_json 收集 media type 提示。"""
+    found: List[str] = []
+    for blob in blobs:
+        if blob is None:
+            continue
+        data = _parse_json(blob) if not isinstance(blob, (dict, list)) else blob
+        if isinstance(data, dict):
+            types = data.get("media_types") or []
+            if isinstance(types, str):
+                types = [types]
+            if isinstance(types, list):
+                found.extend(str(t) for t in types)
+            media = data.get("media")
+            if isinstance(media, list):
+                for m in media:
+                    if isinstance(m, dict):
+                        found.append(str(m.get("type") or m.get("media_type") or ""))
+                    elif isinstance(m, str) and m.startswith("http"):
+                        found.append("photo" if _is_image_url(m) else "unknown")
+            if data.get("has_video"):
+                found.append("video")
+        elif isinstance(data, list):
+            for m in data:
+                if isinstance(m, dict):
+                    found.append(str(m.get("type") or m.get("media_type") or ""))
+                elif isinstance(m, str) and m.startswith("http"):
+                    found.append("photo" if _is_image_url(m) else "unknown")
+    return found
+
+
+def _twitter_has_video(raw: Any, media_json: Any = None) -> bool:
+    types = [str(t).lower() for t in _media_types_hint(raw, media_json) if t]
+    if any(t in {"video", "animated_gif", "gif"} for t in types):
+        return True
+    if isinstance(raw, dict) and bool(raw.get("has_video")):
+        return True
+    return False
 
 
 def _dig_urls(obj: Any, depth: int = 0) -> List[str]:
@@ -88,14 +164,13 @@ def _dig_urls(obj: Any, depth: int = 0) -> List[str]:
     out: List[str] = []
     if isinstance(obj, str):
         if obj.startswith("http"):
-            low = obj.lower()
-            if _is_youtube(obj) or any(ext in low for ext in (".mp4", ".webm", ".m4v", ".mov")):
+            if _is_video_like_url(obj):
                 out.append(obj)
             else:
                 out.extend(_urls_from_text(obj))
         return out
     if isinstance(obj, dict):
-        # 优先常见视频字段
+        # 优先常见视频字段；泛化 url 必须过视频白名单，避免 jpg 配图混入
         for key in (
             "videoUrl",
             "video_url",
@@ -109,7 +184,7 @@ def _dig_urls(obj: Any, depth: int = 0) -> List[str]:
             "url",
         ):
             val = obj.get(key)
-            if isinstance(val, str) and val.startswith("http"):
+            if isinstance(val, str) and val.startswith("http") and _is_video_like_url(val):
                 out.append(val)
         for v in obj.values():
             out.extend(_dig_urls(v, depth + 1))
@@ -121,17 +196,20 @@ def _dig_urls(obj: Any, depth: int = 0) -> List[str]:
 
 
 def extract_video_url_from_post(row: Dict[str, Any]) -> Optional[str]:
-    """从单条发文解析可下载视频 URL（YouTube 页 / 直链 / 平台页）。"""
+    """从单条发文解析可下载视频 URL（YouTube 页 / 直链 / 平台页）。
+
+    禁止把静态配图（jpg/png 等）当成视频，否则会出现 1 帧 / 0s。
+    """
     platform = str(row.get("platform") or "").lower()
     content_url = str(row.get("content_url") or "").strip()
     content_type = str(row.get("content_type") or "").lower()
     text = str(row.get("content_text") or "")
     raw = _parse_json(row.get("raw_json"))
+    media_json = row.get("media_json")
 
-    # 1) 正文/外链里的 YouTube
+    # 1) 正文/外链里的 YouTube / 视频直链
     for u in _urls_from_text(text):
-        if _is_youtube(u):
-            return u
+        return u
     if content_url and _is_youtube(content_url):
         return content_url
 
@@ -143,40 +221,31 @@ def extract_video_url_from_post(row: Dict[str, Any]) -> Optional[str]:
         if vid and not vid.startswith("http"):
             return f"https://www.youtube.com/watch?v={vid}"
 
-    # 3) Twitter：显式 has_video / media_types 含 video → 用状态页走 yt-dlp
-    if platform == "twitter" and isinstance(raw, dict):
-        types = raw.get("media_types") or []
-        if isinstance(types, str):
-            types = [types]
-        has_video = bool(raw.get("has_video")) or any(
-            str(t).lower() in {"video", "animated_gif"} for t in types
-        )
-        if has_video:
-            tid = str(row.get("content_id") or raw.get("id") or "").strip()
-            if content_url:
+    # 3) Twitter：仅当媒体类型明确是视频/GIF 时，用状态页走 yt-dlp
+    if platform == "twitter":
+        if _twitter_has_video(raw, media_json):
+            raw_id = raw.get("id") if isinstance(raw, dict) else None
+            tid = str(row.get("content_id") or raw_id or "").strip()
+            if content_url and not _is_image_url(content_url):
                 return content_url
             if tid:
                 return f"https://twitter.com/i/status/{tid}"
-        # 外链 YouTube
+        # 纯图片帖：不再深挖 media.url（jpg）
         for u in _dig_urls(raw):
-            if _is_youtube(u):
+            if _is_youtube(u) or _is_video_like_url(u):
                 return u
+        return None
 
-    # 4) 直链 / raw 深挖
-    for u in _urls_from_text(text):
-        return u
-    if content_url and any(content_url.lower().endswith(ext) for ext in (".mp4", ".webm", ".m4v", ".mov")):
+    # 4) 直链 / raw 深挖（仅视频形态）
+    if content_url and _is_video_like_url(content_url):
         return content_url
     dug = _dig_urls(raw)
     for u in dug:
-        if _is_youtube(u) or any(ext in u.lower() for ext in (".mp4", ".webm", ".m4v")):
+        if _is_video_like_url(u):
             return u
-    # TikTok / IG 等页面
-    if content_type == "video" and content_url:
+    # TikTok / IG 等：content_type 声明为 video 且非图片直链
+    if content_type == "video" and content_url and not _is_image_url(content_url):
         return content_url
-    for u in dug:
-        if u.startswith("http"):
-            return u
     return None
 
 

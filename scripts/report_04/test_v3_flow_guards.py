@@ -135,6 +135,45 @@ class V3FlowGuardTest(unittest.TestCase):
         ):
             self.assertFalse(gates.identity_step_terminal("task-v3"))
 
+    def test_maigret_parent_is_lit_when_child_running(self):
+        store = _FakeStore()
+        statuses = {"step2_maigret": "running", "phase_discovery": "pending"}
+
+        def _gst(_task_id, key):
+            return statuses.get(key)
+
+        def _set(_task_id, step_key, status, **_kwargs):
+            statuses[step_key] = status
+
+        with patch("report_04.sink.get_step_status", side_effect=_gst), \
+                patch.object(store, "set_step_status", side_effect=_set):
+            from report_04.sink import _ensure_maigret_parent_lit
+
+            _ensure_maigret_parent_lit(store, "task-v3")
+        self.assertEqual("running", statuses["phase_discovery"])
+
+    def test_hold_discovery_demotes_maigret_child_and_parent(self):
+        store = _FakeStore()
+        statuses = {
+            "step1_seed": "running",
+            "step2_maigret": "running",
+            "phase_discovery": "running",
+        }
+
+        def _gst(_task_id, key):
+            return statuses.get(key)
+
+        def _set(_task_id, step_key, status, **_kwargs):
+            statuses[step_key] = status
+
+        with patch("report_04.sink.get_step_status", side_effect=_gst), \
+                patch.object(store, "set_step_status", side_effect=_set):
+            from report_04.sink import _hold_discovery_until_seed
+
+            _hold_discovery_until_seed(store, "task-v3")
+        self.assertEqual("pending", statuses["step2_maigret"])
+        self.assertEqual("pending", statuses["phase_discovery"])
+
     def test_v3_gate_does_not_skip_running_seed_step(self):
         statuses = {
             "step1_seed": "running",
@@ -249,12 +288,11 @@ class V3FlowGuardTest(unittest.TestCase):
             report_parser.is_final_report(self._current_template_report())
         )
 
-    def test_current_docx_report_missing_fixed_item_is_rejected(self):
-        self.assertFalse(
-            report_parser.is_final_report(
-                self._current_template_report(include_economy=False)
-            )
-        )
+    def test_current_docx_report_missing_fixed_item_is_soft_accepted(self):
+        # 严格模板仍判缺项；收口放宽：八章齐全且多数二级项在即可
+        body = self._current_template_report(include_economy=False)
+        self.assertFalse(report_parser.follows_current_report_template(body))
+        self.assertTrue(report_parser.is_final_report(body))
 
     def test_named_header_and_optional_photo_are_preserved(self):
         report = self._current_template_report().replace(
@@ -272,7 +310,7 @@ class V3FlowGuardTest(unittest.TestCase):
             )
         )
 
-    def test_generic_header_or_photo_placeholder_is_rejected(self):
+    def test_generic_header_is_rejected_but_photo_placeholder_is_stripped(self):
         generic = self._current_template_report().replace(
             "测试人物 公开资料核查报告",
             "公开资料核查报告",
@@ -284,7 +322,12 @@ class V3FlowGuardTest(unittest.TestCase):
             "测试人物 公开资料核查报告\n照片来源：暂无照片\n",
             1,
         )
-        self.assertFalse(report_parser.is_final_report(placeholder))
+        # 占位照片剥掉后结构合格即可收，不再整篇打回
+        self.assertTrue(report_parser.is_final_report(placeholder))
+        self.assertNotIn(
+            "暂无照片",
+            report_parser.prepare_final_report_body(placeholder),
+        )
 
     def test_web_coverage_classifier_uses_template_topics(self):
         topics = sink._classify_web_coverage_topics(
@@ -353,6 +396,52 @@ class V3FlowGuardTest(unittest.TestCase):
             "alice",
             account_id_from_tool_args({"screen_name": "alice"}),
         )
+
+    def test_first_str_unwraps_media_dict_and_clips_avatar(self):
+        from collect_01.normalizers.base import first_str, profile_row
+
+        url = (
+            "https://media.licdn.com/dms/image/v2/D5603AQHa5d6DY7mLRQ/"
+            "profile-displayphoto-crop_800_800/B56ZuSQAarGsAI-/0/1767685228784"
+            "?e=1795651200&v=beta&t=2MQddDBJ0mmygy-234pIcMMYNI-TnH1DbuV2SfOgugo"
+        )
+        self.assertEqual(url, first_str({"url": url, "sizes": [{"url": "x"}]}))
+        self.assertNotIn("{", first_str({"url": url}) or "")
+        row = profile_row(
+            {"task_id": "t1", "tool_output_id": 1},
+            platform="linkedin",
+            account_id="ACoA",
+            avatar_url={"url": url + ("x" * 600), "sizes": []},
+            profile_url="https://www.linkedin.com/in/demo",
+        )
+        self.assertTrue(str(row["avatar_url"]).startswith("https://"))
+        self.assertLessEqual(len(row["avatar_url"]), 512)
+        self.assertNotIn("sizes", str(row["avatar_url"]))
+
+    def test_linkedin_profile_picture_object_becomes_url(self):
+        from collect_01.normalizers import apify
+
+        items = [
+            {
+                "id": "ACoAABZVUs4B6iEFBV809kPH8F0NL7imon9PeXA",
+                "publicIdentifier": "catarina-cottinelli-da-costa-952596a5",
+                "firstName": "Catarina",
+                "lastName": "Cottinelli",
+                "headline": "Director",
+                "profilePicture": {
+                    "url": (
+                        "https://media.licdn.com/dms/image/v2/D5603AQHa5d6DY7mLRQ/"
+                        "profile-displayphoto-crop_800_800/x"
+                    ),
+                    "sizes": [{"url": "https://example.com/small.jpg"}],
+                },
+            }
+        ]
+        ctx = {"task_id": "task-li-avatar", "tool_output_id": 1}
+        profiles, _posts = apify._linkedin_items(ctx, items)
+        self.assertEqual(1, len(profiles))
+        self.assertTrue(str(profiles[0]["avatar_url"]).startswith("https://media.licdn.com/"))
+        self.assertLessEqual(len(profiles[0]["avatar_url"]), 512)
 
     def test_linkedin_posts_use_ctx_account_when_author_fields_stripped(self):
         from collect_01.normalizers import apify
@@ -427,7 +516,142 @@ class V3FlowGuardTest(unittest.TestCase):
                 patch("collect_01.db.fetch_all", return_value=[]):
             _profiles, posts = apify._linkedin_items(ctx, items)
         self.assertEqual(1, len(posts))
+        # 无被采主页时才保留条目作者
         self.assertEqual("other-person-123", posts[0]["account_id"])
+
+    def test_linkedin_profile_posts_force_seed_account_even_if_repost(self):
+        from collect_01.normalizers import apify
+
+        items = [
+            {
+                "type": "post",
+                "content": "company share on timeline",
+                "author.publicIdentifier": "atelier-daciano-da-costa",
+                "author.universalName": "atelier-daciano-da-costa",
+            }
+        ]
+        ctx = {
+            "task_id": "task-linkedin-repost",
+            "account_id": "catarina-cottinelli-da-costa-952596a5",
+        }
+        with patch(
+            "collect_01.db.fetch_one",
+            return_value={
+                "account_id": "ACoAABZVUs4B6iEFBV809kPH8F0NL7imon9PeXA",
+                "account_handle": "catarina-cottinelli-da-costa-952596a5",
+            },
+        ):
+            _profiles, posts = apify._linkedin_items(ctx, items)
+        self.assertEqual(1, len(posts))
+        self.assertEqual(
+            "ACoAABZVUs4B6iEFBV809kPH8F0NL7imon9PeXA",
+            posts[0]["account_id"],
+        )
+
+    def test_report_phase_blocks_all_tools_when_write_ready(self):
+        with patch.object(orchestrator, "infer_gate_step", return_value="step7_report"), \
+                patch(
+                    "report_04.video_report.can_write_report_after_videos",
+                    return_value={"ok": True},
+                ), \
+                patch(
+                    "report_04.engine.build_report_materials_pack",
+                    return_value="【写报材料包·已入库摘要】\n- 对象：测试",
+                ):
+            reason = orchestrator.block_tool_reason(
+                "task-v3", "web_search", phase="step7_report"
+            )
+            self.assertIsNotNone(reason)
+            self.assertIn("禁止调用 web_search", reason)
+            self.assertIn("八章", reason)
+            self.assertIn("写报材料包", reason)
+            reason2 = orchestrator.block_tool_reason(
+                "task-v3", "write_file", phase="step7_report"
+            )
+            self.assertIsNotNone(reason2)
+            self.assertIn("write_file", reason2)
+
+    def test_advance_does_not_light_report_before_write_gate(self):
+        store = _FakeStore()
+        with patch.object(orchestrator, "report_prerequisites_ready", create=True), \
+                patch("report_04.gates.report_prerequisites_ready", return_value=True), \
+                patch(
+                    "report_04.step_reconcile.list_unattempted_post_platforms",
+                    return_value=[],
+                ), \
+                patch(
+                    "report_04.step_reconcile._post_collect_attempted",
+                    return_value=True,
+                ), \
+                patch(
+                    "report_04.step_reconcile.close_collect_parent_if_ready",
+                    return_value=False,
+                ), \
+                patch.object(orchestrator, "get_step_status") as gs, \
+                patch(
+                    "report_04.video_report.can_write_report_after_videos",
+                    return_value={"ok": False, "message": "视频未齐"},
+                ), \
+                patch("collect_01.db.fetch_all", return_value=[]):
+            def _gs(_tid, key):
+                if key == "step5_posts":
+                    return "completed"
+                if key == "step7_report":
+                    return "pending"
+                return "completed"
+
+            gs.side_effect = _gs
+            store.set_task_phase = Mock()
+            ok = orchestrator.advance_to_analysis_phase(store, "task-v3", "test")
+            lit = [
+                c for c in store.status_calls
+                if c[1] == "step7_report" and c[2] == "running"
+            ]
+            self.assertEqual([], lit)
+
+    def test_materials_pack_includes_profiles_and_posts(self):
+        with patch(
+            "report_04.engine.db.fetch_one",
+            side_effect=[
+                {
+                    "seed_json": (
+                        '{"person_name":"测试人物","job_title":"主任",'
+                        '"org":"机构","platform":"linkedin",'
+                        '"account_hint":"test-person","profile_url":"https://x"}'
+                    ),
+                    "subject_json": None,
+                },
+                {"payload_json": "{}"},
+            ],
+        ), patch(
+            "report_04.engine.db.fetch_all",
+            side_effect=[
+                [
+                    {
+                        "platform": "linkedin",
+                        "account_id": "ACoA1",
+                        "account_handle": "test-person",
+                        "display_name": "测试人物",
+                        "bio": "bio",
+                        "profile_url": "https://x",
+                    }
+                ],
+                [
+                    {
+                        "platform": "linkedin",
+                        "account_id": "ACoA1",
+                        "published_at": "2026-01-01",
+                        "txt": "hello post",
+                        "url": "https://post",
+                    }
+                ],
+            ],
+        ):
+            pack = engine.build_report_materials_pack("task-v3")
+        self.assertIn("测试人物", pack)
+        self.assertIn("已入库主页", pack)
+        self.assertIn("hello post", pack)
+        self.assertIn("禁止再调", pack)
 
 
 if __name__ == "__main__":

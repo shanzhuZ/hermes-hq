@@ -1660,6 +1660,21 @@ def ensure_step7_parent_active(store: Any, task_id: str) -> int:
             message="发文采集中（晚到补采）" if has_running else "等待发文采集（晚到子节点）",
             force_reopen=True,
         )
+        # 写报若已抢跑点亮，退回 pending，避免「发文未齐却空撞写报工具」
+        s_report = get_step_status(task_id, "step7_report")
+        if s_report == "running":
+            try:
+                store.set_step_status(
+                    task_id,
+                    "step7_report",
+                    "pending",
+                    message="等待发文/视频齐后再写终稿",
+                    force_reopen=True,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "晚到补采回退 step7_report 失败 task=%s: %s", task_id, exc
+                )
         logger.info(
             "step7 晚到子节点，回开父步骤 task=%s running=%s pending=%s",
             task_id,
@@ -1924,8 +1939,21 @@ def reconcile_step1_from_twitter(store: Any, task_id: str) -> int:
 
 
 def reconcile_step2_from_maigret(store: Any, task_id: str) -> int:
-    """回放 Maigret 工具输出，补入库候选并完成步骤二。"""
-    if get_step_status(task_id, "step2_osint_web") in {"completed", "skipped"}:
+    """回放 Maigret 工具输出，补入库候选并完成步骤二。
+
+    v3 树写 step2_maigret（会连带点亮/收口 phase_discovery）；
+    旧树仍写 step2_osint_web。禁止再把 v3 任务写到已消失的旧键上造成空操作。
+    """
+    from report_04.gates import is_v3_report_tree
+    from report_04.phases import MAIGRET_STEP_KEY
+
+    v3 = False
+    try:
+        v3 = is_v3_report_tree(task_id)
+    except Exception:
+        v3 = False
+    step2_key = MAIGRET_STEP_KEY if v3 else "step2_osint_web"
+    if get_step_status(task_id, step2_key) in {"completed", "skipped"}:
         return 0
     from collect_01.normalizers.base import normalize_mcp_tool_name
 
@@ -1969,7 +1997,7 @@ def reconcile_step2_from_maigret(store: Any, task_id: str) -> int:
         for c in cands:
             c["task_id"] = task_id
             c.setdefault("match_strategy", "maigret")
-        store.save_candidate_rows(cands, step_key="step2_osint_web")
+        store.save_candidate_rows(cands, step_key=step2_key)
         total += len(cands)
         last_sites = data.get("sites_scanned")
         last_data = data if isinstance(data, dict) else {}
@@ -1977,7 +2005,7 @@ def reconcile_step2_from_maigret(store: Any, task_id: str) -> int:
     if total > 0:
         store.set_step_status(
             task_id,
-            "step2_osint_web",
+            step2_key,
             "completed",
             message=format_step2_message(
                 total,

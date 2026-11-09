@@ -111,13 +111,49 @@ def decode_escaped_text(value: Optional[str]) -> Optional[str]:
 
 
 def first_str(*values: Any) -> Optional[str]:
+    """取第一个非空字符串；dict/list 会解包 url/src/href 等常见字段，避免 str(dict) 脏数据。"""
     for v in values:
-        if v is None:
+        if v is None or isinstance(v, bool):
             continue
+        if isinstance(v, dict):
+            nested = first_str(
+                v.get("url"),
+                v.get("href"),
+                v.get("src"),
+                v.get("value"),
+                v.get("text"),
+                v.get("id"),
+                v.get("username"),
+            )
+            if nested:
+                return nested
+            continue
+        if isinstance(v, (list, tuple)):
+            nested = first_str(*v)
+            if nested:
+                return nested
+            continue
+        if isinstance(v, (bytes, bytearray)):
+            try:
+                v = v.decode("utf-8", errors="ignore")
+            except Exception:
+                continue
         s = decode_escaped_text(str(v).strip())
         if s:
             return s
     return None
+
+
+def clip_db_str(value: Optional[str], limit: int) -> Optional[str]:
+    """入库前截断，避免 varchar 超长直接把 Hook 打崩。"""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if len(text) <= limit:
+        return text
+    return text[:limit]
 
 
 _URL_ACCOUNT_SKIP_SLUGS = {
@@ -333,6 +369,7 @@ def profile_row(
     raw: Any = None,
     collect_status: str = "success",
 ) -> Dict[str, Any]:
+    # collect_profiles.avatar_url / profile_url 均为 varchar(512)
     return {
         "task_id": ctx["task_id"],
         "platform": platform,
@@ -340,8 +377,8 @@ def profile_row(
         "account_handle": account_handle,
         "display_name": display_name,
         "bio": bio,
-        "avatar_url": avatar_url,
-        "profile_url": profile_url,
+        "avatar_url": clip_db_str(first_str(avatar_url), 512),
+        "profile_url": clip_db_str(first_str(profile_url), 512),
         "follower_count": follower_count,
         "following_count": following_count,
         "content_count": content_count,

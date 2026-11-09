@@ -841,10 +841,12 @@ def _linkedin_items(ctx: Dict[str, Any], items: List[Any]):
                         display_name=display,
                         bio=first_str(item.get("about"), item.get("headline"), item.get("summary")),
                         avatar_url=first_str(
+                            item.get("photo"),
                             item.get("photoUrl"),
                             item.get("profilePicture"),
                             item.get("pictureUrl"),
                             item.get("avatar"),
+                            item.get("profilePictureUrl"),
                         ),
                         profile_url=first_str(
                             item.get("linkedinUrl"),
@@ -863,6 +865,8 @@ def _linkedin_items(ctx: Dict[str, Any], items: List[Any]):
                 )
             continue
         if looks_like_post and (post_id or post_text):
+            # 主页发文 Actor 返回的是「该主页时间线」，常夹带转发/他人原文；
+            # 有明确被采账号时一律归到该账号，避免 account_id 散成一堆公司/路人。
             item_author = first_str(
                 _item_val(
                     item,
@@ -877,14 +881,12 @@ def _linkedin_items(ctx: Dict[str, Any], items: List[Any]):
                 first_str(_item_val(item, "author.id", "authorId")),
                 handle if handle != default_handle else None,
             )
-            if item_author and not (
-                _same_linkedin_account(item_author, default_account_id)
-                or _same_linkedin_account(item_author, default_handle)
-                or _same_linkedin_account(item_author, str(prof.get("account_handle") or ""))
-            ):
-                author = item_author
-            else:
-                author = default_account_id or item_author or default_handle or "unknown"
+            author = (
+                default_account_id
+                or default_handle
+                or item_author
+                or "unknown"
+            )
             content_url = first_str(
                 item.get("linkedinUrl"),
                 item.get("postUrl"),

@@ -186,6 +186,120 @@ def format_system_progress_board(task_id: str) -> str:
     return "\n".join(lines)
 
 
+def build_report_materials_pack(task_id: str, *, max_chars: int = 6500) -> str:
+    """写报前压缩材料包：已入库主页/发文/网页来源，减少模型再搜再采。"""
+    lines: List[str] = [
+        "【写报材料包·已入库摘要】以下材料已在库；禁止再调 web_search/发文/主页/write_file，直接据此写八章。",
+    ]
+    try:
+        task = db.fetch_one(
+            "SELECT seed_json, subject_json FROM hermes_tasks WHERE task_id=%s",
+            (task_id,),
+        ) or {}
+        seed = {}
+        try:
+            import json as _json
+
+            seed = _json.loads(task.get("seed_json") or "{}") or {}
+        except Exception:
+            seed = {}
+        name = str(seed.get("person_name") or seed.get("account_hint") or "").strip()
+        job = str(seed.get("job_title") or "").strip()
+        org = str(seed.get("org") or "").strip()
+        if name or job or org:
+            lines.append(
+                f"- 对象：{name or '（未命名）'}"
+                + (f"｜职位：{job}" if job else "")
+                + (f"｜机构：{org}" if org else "")
+            )
+        if seed.get("profile_url") or seed.get("platform"):
+            lines.append(
+                f"- 种子：{seed.get('platform') or ''} "
+                f"{seed.get('account_hint') or seed.get('account_handle') or ''} "
+                f"{seed.get('profile_url') or ''}".strip()
+            )
+    except Exception:
+        pass
+
+    try:
+        profiles = db.fetch_all(
+            """
+            SELECT platform, account_id, account_handle, display_name,
+                   LEFT(IFNULL(bio,''), 160) AS bio, profile_url
+            FROM collect_profiles WHERE task_id=%s
+            ORDER BY id ASC LIMIT 8
+            """,
+            (task_id,),
+        ) or []
+        if profiles:
+            lines.append("- 已入库主页：")
+            for p in profiles:
+                lines.append(
+                    f"  · {p.get('platform')}/{p.get('account_handle') or p.get('account_id')}"
+                    f"｜{p.get('display_name') or ''}"
+                    f"｜{(p.get('bio') or '').replace(chr(10), ' ')}"
+                    f"｜{p.get('profile_url') or ''}"
+                )
+    except Exception:
+        pass
+
+    try:
+        posts = db.fetch_all(
+            """
+            SELECT platform, account_id, published_at,
+                   LEFT(IFNULL(content_text,''), 180) AS txt,
+                   LEFT(IFNULL(content_url,''), 120) AS url
+            FROM collect_posts WHERE task_id=%s
+            ORDER BY published_at DESC, id DESC
+            LIMIT 12
+            """,
+            (task_id,),
+        ) or []
+        if posts:
+            lines.append(f"- 已入库发文摘要（最近 {len(posts)} 条）：")
+            for p in posts:
+                lines.append(
+                    f"  · [{p.get('platform')}] {p.get('published_at') or ''} "
+                    f"{(p.get('txt') or '').replace(chr(10), ' ')} "
+                    f"{p.get('url') or ''}"
+                )
+        else:
+            lines.append("- 已入库发文：0 条（公开表达可写未核实，或改用步骤4网页材料作证）")
+    except Exception:
+        pass
+
+    try:
+        import json as _json
+
+        row = db.fetch_one(
+            """
+            SELECT payload_json FROM collect_phase_steps
+            WHERE task_id=%s AND step_key='step4_osint_web'
+            """,
+            (task_id,),
+        )
+        payload = {}
+        if row and row.get("payload_json"):
+            payload = _json.loads(row.get("payload_json") or "{}") or {}
+        coverage = payload.get("template_coverage") if isinstance(payload, dict) else None
+        if isinstance(coverage, dict) and coverage:
+            lines.append("- 步骤4网页覆盖：")
+            for key, meta in coverage.items():
+                if not isinstance(meta, dict):
+                    continue
+                status = meta.get("status") or ""
+                sources = meta.get("sources") or []
+                src = "；".join(str(x) for x in sources[:3]) if isinstance(sources, list) else ""
+                lines.append(f"  · {key}:{status}" + (f"｜{src}" if src else ""))
+    except Exception:
+        pass
+
+    text = "\n".join(lines)
+    if len(text) > max_chars:
+        return text[: max_chars - 20] + "\n…（材料包已截断）"
+    return text
+
+
 def _build_agent_context_v3(task_id: str, gate: str) -> str:
     """v3.1：intake + 六步；禁止再注入旧 4.1/4.3/步骤8～10 写报路径。"""
     lines: List[str] = [
@@ -311,13 +425,14 @@ def _build_agent_context_v3(task_id: str, gate: str) -> str:
             lines.append(wait_hint)
         else:
             lines.append(
-                "步骤6：一次输出八章公开资料核查报告（见 Skill 骨架）。"
-                "第一行必须写「# {姓名} 公开资料核查报告」。"
-                "已有可核验本人图片 URL 时在标题下插入 Markdown 图片及来源；无图则整段省略。"
-                "勿在第一节前写进度/管线句。"
-                "必须完整保留 Skill 骨架的固定章节与二级项；无资料写未核实，禁止删项或合并。"
-                "禁止再拆步骤8/9/10 旧专题。"
+                "步骤6：立刻在对话中一次输出八章公开资料核查报告（见 Skill 骨架）。"
+                "第一行写「# {姓名} 公开资料核查报告」；有可核验本人图则附 Markdown 图片及来源，无图整段省略。"
+                "八章齐全即可收口；缺资料写「未核实」，禁止再搜、再采、write_file、拆旧专题。"
             )
+            try:
+                lines.append(build_report_materials_pack(task_id))
+            except Exception as exc:
+                logger.warning("写报材料包注入失败 task=%s: %s", task_id, exc)
     else:
         lines.append(
             "按 v3 六步继续；禁止输出步骤8/9/10 旧专题；禁止空等 done。"
@@ -812,6 +927,12 @@ def run_post_tool_light(store: Any, task_id: str) -> None:
         ensure_maigret_closed_if_tool_done(store, task_id)
     except Exception as exc:
         logger.warning("engine maigret 兜底收口失败 task=%s: %s", task_id, exc)
+    try:
+        from report_04.sink import _ensure_maigret_parent_lit
+
+        _ensure_maigret_parent_lit(store, task_id)
+    except Exception as exc:
+        logger.warning("engine 补点亮 Maigret 父壳失败 task=%s: %s", task_id, exc)
 
     v3 = False
     try:
@@ -930,6 +1051,12 @@ def run_pre_llm_auto(store: Any, task_id: str) -> None:
                 ensure_maigret_closed_if_tool_done(store, task_id)
             except Exception as exc:
                 logger.warning("pre_llm v3 maigret 兜底失败 task=%s: %s", task_id, exc)
+            try:
+                from report_04.sink import _ensure_maigret_parent_lit
+
+                _ensure_maigret_parent_lit(store, task_id)
+            except Exception as exc:
+                logger.warning("pre_llm v3 补点亮 Maigret 父壳失败 task=%s: %s", task_id, exc)
             try:
                 ensure_v3_identity_started(store, task_id)
             except Exception as exc:

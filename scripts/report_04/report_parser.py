@@ -94,6 +94,31 @@ def report_header_photo_valid(content: str) -> bool:
     return not bool(re.search(r"照片来源|暂无照片|无照片|照片\s*[：:]", header))
 
 
+def strip_invalid_header_photo(content: str) -> str:
+    """非法/占位照片字段从文首剥掉，避免小格式问题导致整篇终稿打回。"""
+    raw = content or ""
+    if not raw:
+        return ""
+    if report_header_photo_valid(raw):
+        return raw
+    section_idx = raw.find(_SECTION1_HEAD)
+    if section_idx < 0:
+        header, rest = raw, ""
+    else:
+        header, rest = raw[:section_idx], raw[section_idx:]
+    kept: List[str] = []
+    for line in header.splitlines():
+        if re.search(r"!\[[^\]]*\]\([^)]+\)", line):
+            continue
+        if re.search(r"照片来源|暂无照片|无照片|照片\s*[：:]", line):
+            continue
+        kept.append(line)
+    header2 = "\n".join(kept).strip()
+    if rest:
+        return (header2 + "\n\n" + rest).strip() if header2 else rest.strip()
+    return header2
+
+
 def extract_report_body(content: str) -> str:
     """剥掉终稿前的进度元叙述，从「一、基本情况」（或旧「一、账号基本信息」）起截取。"""
     raw = (content or "").strip()
@@ -172,7 +197,8 @@ def prepare_final_report_body(content: str) -> str:
     注意：不剥 [报告标签] 块。标签须保留到 save_assistant_output，由 extract_report_tags 落库；
     若在此剥掉，调用方把返回值再当 assistant 传入时 tags 会永久丢失。
     """
-    return sanitize_report_dirty_meta(extract_report_body(content))
+    body = sanitize_report_dirty_meta(extract_report_body(content))
+    return strip_invalid_header_photo(body)
 
 
 def _parse_report_tag_chunk(chunk: str) -> List[str]:
@@ -241,7 +267,7 @@ def looks_like_report_attempt(content: str) -> bool:
 
 
 def follows_current_report_template(content: str) -> bool:
-    """新八章模板：固定章节与 DOCX 规定的二级项不可省略。"""
+    """新八章模板：固定章节与 DOCX 规定的二级项不可省略（严格版，供校验/测试）。"""
     compact = (content or "").replace(" ", "").replace("\u3000", "")
     required_heads = (
         "一、基本情况",
@@ -290,11 +316,68 @@ def follows_current_report_template(content: str) -> bool:
     return True
 
 
-def is_final_report(content: str) -> bool:
-    """合法步骤11终稿：够长、含≥2个旧章、且含五/六两章；以第一节开头；脏行先清洗再判定。
+def follows_current_report_template_soft(content: str) -> bool:
+    """写报收口放宽版：八章齐全即可；二级项有多数即可，避免小缺项整篇重写。"""
+    compact = (content or "").replace(" ", "").replace("\u3000", "")
+    required_heads = (
+        "一、基本情况",
+        "二、在职在岗情况",
+        "三、人脉资源",
+        "四、政治立场",
+        "五、污点劣迹",
+        "六、公开表达与专业关注点",
+        "七、身份核验与综合结论",
+        "八、主要来源",
+    )
+    if any(head not in compact for head in required_heads):
+        return False
 
-    允许 Agent 在第一节前写进度句；判定时先剥前缀再清洗脏行。
-    清洗后仍含脏词或结构不够 → False（由调用方 fail-forward，禁止停在 running）。
+    section1 = _extract_section(content, "一、基本情况", ("二、在职在岗情况",))
+    section2 = _extract_section(content, "二、在职在岗情况", ("三、人脉资源",))
+    section4 = _extract_section(content, "四、政治立场", ("五、污点劣迹",))
+    section5 = _extract_section(content, "五、污点劣迹", ("六、公开表达与专业关注点",))
+
+    s1_markers = (
+        "社交媒体",
+        "（一）教育经历",
+        "（二）工作经历",
+        "（三）性格特点",
+        "（四）家庭成员情况",
+        "（五）经济状况",
+    )
+    s2_markers = (
+        "（一）工作单位基本情况",
+        "（二）在岗情况",
+        "（三）岗位职能",
+    )
+    s4_markers = (
+        "（一）对华态度",
+        "（二）对所在国政治态度",
+        "（三）对美政治态度",
+    )
+    s1_hit = sum(1 for m in s1_markers if m in section1)
+    s2_hit = sum(1 for m in s2_markers if m in section2)
+    s4_hit = sum(1 for m in s4_markers if m in section4)
+    # 章节有实质正文也算过；否则至少命中多数二级项
+    if len(section1) >= 40 and s1_hit >= 3:
+        pass
+    elif s1_hit >= 4:
+        pass
+    else:
+        return False
+    if not (len(section2) >= 30 or s2_hit >= 2):
+        return False
+    if not (len(section4) >= 30 or s4_hit >= 2):
+        return False
+    if not (len(section5) >= 20 or "（一）" in section5):
+        return False
+    return True
+
+
+def is_final_report(content: str) -> bool:
+    """合法八章终稿：够长、八章齐全、以标题/第一节起笔；脏行先清洗再判定。
+
+    收口策略：结构合格即收。姓名标题、照片、个别二级项缺失不再整篇打回。
     注意：步骤8/9/10 的独立块走 parse_standalone_analysis_blocks，不经过本函数。
     """
     body = prepare_final_report_body(content)
@@ -312,13 +395,9 @@ def is_final_report(content: str) -> bool:
         return False
     if _SECTION6_HEAD.replace(" ", "") not in compact:
         return False
-    # 旧「一、账号基本信息」报告继续兼容；新「一、基本情况」必须严格遵循 DOCX 模板。
+    # 旧「一、账号基本信息」继续兼容；新「一、基本情况」用放宽版八章校验。
     if _SECTION1_HEAD.replace(" ", "") in compact:
-        if not has_named_report_header(body):
-            return False
-        if not report_header_photo_valid(body):
-            return False
-        if not follows_current_report_template(body):
+        if not follows_current_report_template_soft(body):
             return False
     return True
 

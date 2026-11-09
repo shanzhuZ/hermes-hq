@@ -1562,6 +1562,12 @@ class TaskStore:
         )
 
     def save_profile_row(self, row: Dict[str, Any], *, step_key: str = "step3_profiles") -> None:
+        # 兜底截断：varchar(512)，防止 dict 字符串化等脏值把整个 post_tool Hook 打崩
+        safe_row = dict(row or {})
+        for key in ("avatar_url", "profile_url", "account_id", "account_handle", "display_name"):
+            val = safe_row.get(key)
+            if isinstance(val, str) and len(val) > 512:
+                safe_row[key] = val[:512]
         db.execute(
             """
             INSERT INTO collect_profiles
@@ -1581,12 +1587,12 @@ class TaskStore:
               tool_output_id=VALUES(tool_output_id), raw_json=VALUES(raw_json),
               collected_at=NOW(3)
             """,
-            row,
+            safe_row,
         )
         try:
             from collect_01.display_store import sync_profile_display
 
-            sync_profile_display(row, step_key=step_key)
+            sync_profile_display(safe_row, step_key=step_key)
         except Exception as exc:
             logger.warning("展示层双写 profile 失败: %s", exc)
 

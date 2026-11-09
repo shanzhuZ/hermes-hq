@@ -1005,13 +1005,17 @@ def _seed_ready(task_id: str) -> bool:
 
 
 def _hold_discovery_until_seed(store: TaskStore, task_id: str) -> None:
-    """种子未完成时，把已抢跑的线索发现打回 pending，避免第二步先亮。"""
+    """种子未完成时，把已抢跑的线索发现打回 pending，避免第二步先亮。
+
+    注意：必须同时回退 step2_maigret 与 phase_discovery。
+    旧逻辑只回退父壳，会造成「子节点 running、父壳一直 pending」的空窗。
+    """
     if _seed_ready(task_id):
         return
     if get_step_status(task_id, "step1_seed") in {"failed", "skipped"}:
         return
     for step_key, message in (
-        ("step2_osint_web", "等待种子采集完成"),
+        (MAIGRET_STEP_KEY, "等待种子采集完成"),
         ("step2_osint_web", "等待种子采集完成"),
         ("phase_discovery", "等待锁定目标完成"),
     ):
@@ -1026,6 +1030,23 @@ def _hold_discovery_until_seed(store: TaskStore, task_id: str) -> None:
             skip_phase_rollup=True,
         )
         logger.info("种子未完成，回退抢跑步骤 task=%s step=%s", task_id, step_key)
+
+
+def _ensure_maigret_parent_lit(store: TaskStore, task_id: str) -> None:
+    """step2_maigret 已 running 时强制点亮 phase_discovery，避免父壳长期 pending。"""
+    if get_step_status(task_id, MAIGRET_STEP_KEY) != "running":
+        return
+    parent = get_step_status(task_id, "phase_discovery")
+    if parent in {"running", "completed", "skipped", "failed"}:
+        return
+    store.set_step_status(
+        task_id,
+        "phase_discovery",
+        "running",
+        message="子步骤执行中",
+        skip_phase_rollup=True,
+    )
+    logger.info("补点亮 phase_discovery（对齐 step2_maigret running） task=%s", task_id)
 
 
 def _is_premature_before_intake(tool_name: str, task_id: str) -> Optional[str]:
@@ -2843,6 +2864,35 @@ def _on_post_tool(payload: Dict[str, Any]) -> None:
         if tool_call_id:
             _SEEN_TOOL_CALLS.add(tool_call_id)
         logger.info("门禁拦截仅审计不推进 task=%s tool=%s", task_id, tool_name)
+        # 写报期连撞工具：累计后催一次带材料包的 analysis 续跑，避免空转十几分钟
+        try:
+            from report_04.orchestrator import infer_gate_step
+            from report_04.video_report import can_write_report_after_videos
+
+            if (
+                infer_gate_step(task_id) == "step7_report"
+                and can_write_report_after_videos(task_id).get("ok")
+            ):
+                from report_04.session_continue import (
+                    _payload,
+                    _write_payload,
+                    maybe_continue_agent_session,
+                )
+
+                p = _payload(task_id)
+                n = int(p.get("report_phase_tool_blocks") or 0) + 1
+                p["report_phase_tool_blocks"] = n
+                _write_payload(store, task_id, p)
+                if n in {2, 4, 6}:
+                    maybe_continue_agent_session(
+                        store,
+                        task_id,
+                        reason=f"report_tool_block_x{n}",
+                        kind="analysis",
+                        force=False,
+                    )
+        except Exception as exc:
+            logger.warning("写报期工具连撞催续失败 task=%s: %s", task_id, exc)
         return
 
     input_accounts = store.get_seed_accounts(task_id)
@@ -2912,6 +2962,8 @@ def _on_post_tool(payload: Dict[str, Any]) -> None:
                 cur = get_step_status(task_id, primary_step)
                 if cur not in {"completed", "failed", "skipped"}:
                     store.set_step_status(task_id, primary_step, "running", message=f"执行 {tool_name}")
+                    if primary_step == MAIGRET_STEP_KEY:
+                        _ensure_maigret_parent_lit(store, task_id)
     if collect_step and not seed_collect:
         blocked = (
             (collect_step.startswith("step3_profile_") and not can_update_step4_children(task_id))
@@ -3318,6 +3370,7 @@ def _on_post_tool(payload: Dict[str, Any]) -> None:
                     "running",
                     message=f"Maigret 执行中 ({tool_name})",
                 )
+            _ensure_maigret_parent_lit(store, task_id)
             cands = result_data.get("candidates") or []
             if cands and get_step_status(task_id, MAIGRET_STEP_KEY) not in {
                 "completed",
@@ -3636,8 +3689,8 @@ def _on_post_llm_call(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     else:
                         followup_ctx = build_post_llm_followup(task_id) + (
                             "\n【写报硬约束】发文已齐。禁止再复述步骤5/6/4.3/7。"
-                            "请立即一次输出八章公开资料核查报告（文首标题或「一、基本情况」起笔）。"
-                            "禁止调用 vision；禁止 done。"
+                            "请立即在对话中一次输出八章公开资料核查报告（文首标题或「一、基本情况」起笔）。"
+                            "禁止 write_file / web_search / 发文补采；禁止调用 vision；禁止 done。"
                         )
                     maybe_continue_agent_session(
                         store,

@@ -120,6 +120,113 @@ def first_str(*values: Any) -> Optional[str]:
     return None
 
 
+_URL_ACCOUNT_SKIP_SLUGS = {
+    "p",
+    "reel",
+    "tv",
+    "stories",
+    "in",
+    "feed",
+    "posts",
+    "people",
+    "pages",
+    "groups",
+    "watch",
+    "share",
+    "channel",
+    "www",
+    "home",
+    "login",
+    "profile.php",
+}
+
+
+def _first_tool_arg_text(val: Any) -> Optional[str]:
+    if val is None:
+        return None
+    if isinstance(val, list):
+        for item in val:
+            text = _first_tool_arg_text(item)
+            if text:
+                return text
+        return None
+    if isinstance(val, dict):
+        return _first_tool_arg_text(
+            val.get("url") or val.get("value") or val.get("id") or val.get("username")
+        )
+    text = str(val).strip()
+    return text or None
+
+
+def account_id_from_url_or_handle(text: str) -> Optional[str]:
+    """从主页 URL 或裸 handle 抽出账号标识（LinkedIn /in/、Facebook id 等）。"""
+    raw = (text or "").strip()
+    if not raw:
+        return None
+    m = re.search(r"linkedin\.com/in/([^/?#]+)", raw, re.I)
+    if m:
+        return m.group(1)
+    m = re.search(r"facebook\.com/profile\.php\?id=(\d+)", raw, re.I)
+    if m:
+        return m.group(1)
+    m = re.search(r"youtube\.com/channel/(UC[\w-]{20,})", raw, re.I)
+    if m:
+        return m.group(1)
+    m = re.search(r"youtube\.com/@([^/?#]+)", raw, re.I)
+    if m:
+        return m.group(1).lstrip("@")
+    m = re.search(
+        r"(?:instagram\.com|tiktok\.com/@|facebook\.com|fb\.com|github\.com|"
+        r"twitter\.com|x\.com|t\.me)/@?([^/?#]+)",
+        raw,
+        re.I,
+    )
+    if m:
+        slug = m.group(1).lstrip("@")
+        if slug.lower() not in _URL_ACCOUNT_SKIP_SLUGS:
+            return slug
+    if "/" not in raw and " " not in raw and "://" not in raw:
+        return raw.lstrip("@")
+    return None
+
+
+def account_id_from_tool_args(tool_args: Any) -> Optional[str]:
+    """从 MCP/Apify 入参抽出 account_id。
+
+    get_dataset_items 本身只有 datasetId；发文 Actor 常用 targetUrls/queries/profileUrls。
+    """
+    if not isinstance(tool_args, dict):
+        return None
+    for key in ("user_id", "username", "screen_name", "channelId", "channel_id", "uid"):
+        val = tool_args.get(key)
+        if val not in (None, "", [], {}):
+            text = _first_tool_arg_text(val)
+            if text:
+                extracted = account_id_from_url_or_handle(text)
+                return extracted or text.lstrip("@")
+    for key in (
+        "targetUrls",
+        "targetUrl",
+        "queries",
+        "query",
+        "profileUrls",
+        "profileUrl",
+        "directUrls",
+        "directUrl",
+        "startUrls",
+        "startUrl",
+        "urls",
+        "url",
+    ):
+        text = _first_tool_arg_text(tool_args.get(key))
+        if not text:
+            continue
+        extracted = account_id_from_url_or_handle(text)
+        if extracted:
+            return extracted
+    return None
+
+
 def normalize_published_at(value: Any) -> Optional[str]:
     """统一成 MySQL DATETIME 可接受的 'YYYY-MM-DD HH:MM:SS'。
 

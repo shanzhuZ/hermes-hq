@@ -258,6 +258,15 @@ def _build_agent_context_v3(task_id: str, gate: str) -> str:
                 "步骤4：仅用 web_search/web_extract 为八章备料；"
                 "禁止再搜社交账号；禁止发文；禁止写八章终稿。"
             )
+        try:
+            from report_04.sink import format_web_coverage_hint
+
+            lines.append(format_web_coverage_hint(task_id))
+        except Exception:
+            lines.append(
+                "步骤4按六类模板资料组合检索：基本情况、在职在岗、人脉、政治立场、"
+                "污点劣迹、公开表达；无结果也须明确完成该主题检索。"
+            )
     elif gate == "step5_posts":
         lines.append(
             "步骤5：对已认定账号调用发文工具；禁止提前写八章；"
@@ -303,7 +312,9 @@ def _build_agent_context_v3(task_id: str, gate: str) -> str:
         else:
             lines.append(
                 "步骤6：一次输出八章公开资料核查报告（见 Skill 骨架）。"
-                "必须以文首标题或「一、基本情况」起笔；勿在第一节前写进度/管线句。"
+                "第一行必须写「# {姓名} 公开资料核查报告」。"
+                "已有可核验本人图片 URL 时在标题下插入 Markdown 图片及来源；无图则整段省略。"
+                "勿在第一节前写进度/管线句。"
                 "必须完整保留 Skill 骨架的固定章节与二级项；无资料写未核实，禁止删项或合并。"
                 "禁止再拆步骤8/9/10 旧专题。"
             )
@@ -611,7 +622,9 @@ def build_agent_context(task_id: str) -> Optional[str]:
         elif gate == "step7_report":
             lines.append(
                 "步骤6：一次输出八章公开资料核查报告（见 Skill 骨架）。"
-                "必须以文首标题或「一、基本情况」起笔；勿在第一节前写进度/管线句。"
+                "第一行必须写「# {姓名} 公开资料核查报告」。"
+                "已有可核验本人图片 URL 时在标题下插入 Markdown 图片及来源；无图则整段省略。"
+                "勿在第一节前写进度/管线句。"
                 "必须完整保留 Skill 骨架的固定章节与二级项；无资料写未核实，禁止删项或合并。"
                 "综合步骤2～5证据；无可靠来源写「未核实」；允许带来源链接。"
                 "第七章写完整身份核验与综合结论；末附「八、主要来源」。"

@@ -428,4 +428,4 @@ def bump_osint_budget_for_person(task_id: str) -> Tuple[int, int, int]:
     """返回 (max_search, max_tools, max_wall_sec)；C 路径加大。"""
     if is_person_path(task_id):
         return 12, 18, 600
-    return 3, 5, 300
+    return 8, 12, 480

@@ -68,11 +68,40 @@ _DIRTY_META_PATTERNS = (
 )
 
 
+def has_named_report_header(content: str) -> bool:
+    """首行须包含具体姓名和「公开资料核查报告」，不能只有通用标题。"""
+    raw = (content or "").lstrip()
+    if not raw:
+        return False
+    first = raw.splitlines()[0].strip().lstrip("#").strip()
+    marker = "公开资料核查报告"
+    if marker not in first:
+        return False
+    subject = first.split(marker, 1)[0].strip(" ：:-—")
+    return bool(subject and subject not in {"姓名", "{姓名}", "XXXX", "XXX"})
+
+
+def report_header_photo_valid(content: str) -> bool:
+    """本人照片可选；有图须为 HTTP(S) Markdown 图片并带来源，无图须省略照片字段。"""
+    raw = content or ""
+    section_idx = raw.find(_SECTION1_HEAD)
+    header = raw if section_idx < 0 else raw[:section_idx]
+    images = re.findall(r"!\[[^\]]*\]\(([^)]+)\)", header)
+    if images:
+        if any(not re.match(r"^https?://", url.strip(), re.I) for url in images):
+            return False
+        return "照片来源" in header
+    return not bool(re.search(r"照片来源|暂无照片|无照片|照片\s*[：:]", header))
+
+
 def extract_report_body(content: str) -> str:
     """剥掉终稿前的进度元叙述，从「一、基本情况」（或旧「一、账号基本信息」）起截取。"""
     raw = (content or "").strip()
     if not raw:
         return ""
+    # 新模板的姓名/原名/图片属于终稿正文，禁止像旧进度前缀一样裁掉。
+    if has_named_report_header(raw):
+        return raw
     markers = (
         "## 一、基本情况",
         "# 一、基本情况",
@@ -191,7 +220,7 @@ def starts_with_report_section1(content: str) -> bool:
         t = t[2:].lstrip()
     elif t.startswith("#"):
         t = t[1:].lstrip()
-    if "公开资料核查报告" in t[:80]:
+    if has_named_report_header(t):
         return True
     return t.startswith(_SECTION1_HEAD) or t.startswith("一、账号基本信息")
 
@@ -284,8 +313,13 @@ def is_final_report(content: str) -> bool:
     if _SECTION6_HEAD.replace(" ", "") not in compact:
         return False
     # 旧「一、账号基本信息」报告继续兼容；新「一、基本情况」必须严格遵循 DOCX 模板。
-    if _SECTION1_HEAD.replace(" ", "") in compact and not follows_current_report_template(body):
-        return False
+    if _SECTION1_HEAD.replace(" ", "") in compact:
+        if not has_named_report_header(body):
+            return False
+        if not report_header_photo_valid(body):
+            return False
+        if not follows_current_report_template(body):
+            return False
     return True
 
 

@@ -256,6 +256,179 @@ class V3FlowGuardTest(unittest.TestCase):
             )
         )
 
+    def test_named_header_and_optional_photo_are_preserved(self):
+        report = self._current_template_report().replace(
+            "测试人物 公开资料核查报告\n",
+            "# 测试人物 公开资料核查报告\n"
+            "（原名：Test Person）\n"
+            "![测试人物本人照片](https://example.com/person.jpg)\n"
+            "照片来源：官方人物页｜https://example.com/profile\n",
+            1,
+        )
+        self.assertTrue(report_parser.is_final_report(report))
+        self.assertTrue(
+            report_parser.prepare_final_report_body(report).startswith(
+                "# 测试人物 公开资料核查报告"
+            )
+        )
+
+    def test_generic_header_or_photo_placeholder_is_rejected(self):
+        generic = self._current_template_report().replace(
+            "测试人物 公开资料核查报告",
+            "公开资料核查报告",
+            1,
+        )
+        self.assertFalse(report_parser.is_final_report(generic))
+        placeholder = self._current_template_report().replace(
+            "测试人物 公开资料核查报告\n",
+            "测试人物 公开资料核查报告\n照片来源：暂无照片\n",
+            1,
+        )
+        self.assertFalse(report_parser.is_final_report(placeholder))
+
+    def test_web_coverage_classifier_uses_template_topics(self):
+        topics = sink._classify_web_coverage_topics(
+            {
+                "query": (
+                    '"Test Person" education university family spouse '
+                    'income net worth personality biography'
+                )
+            },
+            "结果中即使出现 politics 也不应误归类",
+        )
+        self.assertEqual(["basic"], topics)
+        politics = sink._classify_web_coverage_topics(
+            {"query": '"Test Person" China US political views policy'},
+            "",
+        )
+        self.assertEqual(["politics"], politics)
+
+    def test_web_coverage_update_records_sources_and_missing_groups(self):
+        store = _FakeStore()
+        with patch.object(sink, "_load_web_coverage", return_value={}), \
+                patch.object(sink, "get_step_status", return_value="running"):
+            sink._update_web_coverage(
+                store,
+                "task-v3",
+                tool_name="web_search",
+                tool_args={
+                    "query": '"Test Person" education family income biography'
+                },
+                tool_output='{"url":"https://example.com/profile","title":"Profile"}',
+            )
+        payload = store.status_calls[-1][3]["payload"]
+        self.assertEqual(
+            "evidence_found",
+            payload["template_coverage"]["basic"]["status"],
+        )
+        self.assertIn(
+            "https://example.com/profile",
+            payload["template_coverage"]["basic"]["sources"],
+        )
+        self.assertFalse(payload["coverage_complete"])
+
+    def test_ab_budget_is_expanded_for_template_coverage(self):
+        with patch("report_04.intake.is_person_path", return_value=False):
+            from report_04.intake import bump_osint_budget_for_person
+
+            self.assertEqual((8, 12, 480), bump_osint_budget_for_person("task-v3"))
+
+    def test_extract_account_id_from_linkedin_target_urls(self):
+        from collect_01.normalizers.base import account_id_from_tool_args
+
+        self.assertEqual(
+            "catarina-cottinelli-da-costa-952596a5",
+            account_id_from_tool_args(
+                {
+                    "targetUrls": [
+                        "https://www.linkedin.com/in/catarina-cottinelli-da-costa-952596a5"
+                    ]
+                }
+            ),
+        )
+        self.assertIsNone(
+            account_id_from_tool_args({"datasetId": "iiNFICqGrlttmodYi", "limit": 30})
+        )
+        self.assertEqual(
+            "alice",
+            account_id_from_tool_args({"screen_name": "alice"}),
+        )
+
+    def test_linkedin_posts_use_ctx_account_when_author_fields_stripped(self):
+        from collect_01.normalizers import apify
+
+        items = [
+            {
+                "type": "post",
+                "content": "Congresso do Meio Milénio de Camões",
+                "postedAt.date": "2024-02-23T05:29:59.422Z",
+                "shareLinkedinUrl": (
+                    "https://www.linkedin.com/feed/update/"
+                    "urn:li:ugcPost:7166665474037039104"
+                ),
+                "engagement.likes": 17,
+                "engagement.comments": 2,
+            }
+        ]
+        ctx = {
+            "task_id": "task-linkedin-unknown",
+            "account_id": "catarina-cottinelli-da-costa-952596a5",
+        }
+        with patch("collect_01.db.fetch_one", return_value=None):
+            _profiles, posts = apify._linkedin_items(ctx, items)
+        self.assertEqual(1, len(posts))
+        self.assertEqual(
+            "catarina-cottinelli-da-costa-952596a5",
+            posts[0]["account_id"],
+        )
+        self.assertEqual(
+            "urn:li:ugcPost:7166665474037039104",
+            posts[0]["content_id"],
+        )
+        self.assertTrue(str(posts[0].get("content_url") or "").endswith(
+            "urn:li:ugcPost:7166665474037039104"
+        ))
+
+    def test_linkedin_posts_prefer_seed_profile_account_id(self):
+        from collect_01.normalizers import apify
+
+        items = [{"type": "post", "content": "hello from macau"}]
+        ctx = {
+            "task_id": "task-linkedin-profile",
+            "account_id": "catarina-cottinelli-da-costa-952596a5",
+        }
+        with patch(
+            "collect_01.db.fetch_one",
+            return_value={
+                "account_id": "ACoAABZVUs4B6iEFBV809kPH8F0NL7imon9PeXA",
+                "account_handle": "catarina-cottinelli-da-costa-952596a5",
+            },
+        ):
+            _profiles, posts = apify._linkedin_items(ctx, items)
+        self.assertEqual(1, len(posts))
+        self.assertEqual(
+            "ACoAABZVUs4B6iEFBV809kPH8F0NL7imon9PeXA",
+            posts[0]["account_id"],
+        )
+
+    def test_linkedin_posts_read_dotted_author_keys(self):
+        from collect_01.normalizers import apify
+
+        items = [
+            {
+                "type": "post",
+                "content": "hello",
+                "author.publicIdentifier": "other-person-123",
+                "author.id": "ACoAOTHER",
+            }
+        ]
+        ctx = {"task_id": "task-linkedin-dotted"}
+        with patch("collect_01.db.fetch_one", return_value=None), \
+                patch("collect_01.db.fetch_all", return_value=[]):
+            _profiles, posts = apify._linkedin_items(ctx, items)
+        self.assertEqual(1, len(posts))
+        self.assertEqual("other-person-123", posts[0]["account_id"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,9 +16,15 @@ from typing import Any, Dict, List, Optional
 
 from collect_01.config import hermes_home
 from collect_01.db import DbError
-from collect_01.normalizers.base import infer_mcp_server
+from collect_01.normalizers.base import account_id_from_tool_args, infer_mcp_server
 from collect_01.normalizers.registry import dispatch
-from collect_01.normalizers.apify import apify_platform_from_actor_tool, resolve_apify_platform_hint, actor_reported_empty_dataset, apify_fail_message
+from collect_01.normalizers.apify import (
+    actor_reported_empty_dataset,
+    apify_fail_message,
+    apify_platform_from_actor_tool,
+    resolve_apify_actor_tool_args,
+    resolve_apify_platform_hint,
+)
 from collect_01.seed_platforms import (
     APIFY_SEED_PLATFORM_TOOLS,
     REPORT_SEED_PROFILE_TOOLS as SEED_PROFILE_TOOLS,
@@ -96,14 +102,70 @@ _PRETOOL_BYPASS_TOOLS = frozenset({
 })
 # 公开信息检索（v3=step4_osint_web / 旧=step2_osint_web）：安静期 + 墙钟/次数上限
 _STEP3_QUIET_SECONDS = 15
-# 最大执行墙钟：默认 5 分钟；可用 HERMES_STEP4_OSINT_WEB_MAX_WALL_SECONDS 覆盖
+# 最大执行墙钟：默认 8 分钟；可用 HERMES_STEP4_OSINT_WEB_MAX_WALL_SECONDS 覆盖
 _STEP3_MAX_WALL_SECONDS = int(
-    os.environ.get("HERMES_STEP4_OSINT_WEB_MAX_WALL_SECONDS", "300") or "300"
+    os.environ.get("HERMES_STEP4_OSINT_WEB_MAX_WALL_SECONDS", "480") or "480"
 )
-_STEP3_MAX_WEB_SEARCH = 3  # web_search 成功次数上限
-_STEP3_MAX_WEB_TOOLS = 5  # 全部 web/browser 工具成功次数上限
-# 达标门槛：extract≥1 或 browser≥1 或 search≥2（原 search≥3）
-_STEP3_MIN_SEARCH_FOR_DONE = 2
+_STEP3_MAX_WEB_SEARCH = 8  # A/B 动态检索硬上限；覆盖齐可提前结束
+_STEP3_MAX_WEB_TOOLS = 12  # 全部 web/browser 工具硬上限
+
+# DOCX 模板驱动的六类资料覆盖；每类至少执行过一次专项/组合检索。
+_WEB_COVERAGE_GROUPS: Dict[str, Dict[str, Any]] = {
+    "basic": {
+        "title": "基本情况（教育/工作/性格/家庭/经济）",
+        "fields": ["education", "work_history", "personality", "family", "economic"],
+        "pattern": (
+            r"教育|学历|学校|大学|毕业|学位|履历|生平|出生|家庭|配偶|丈夫|妻子|父亲|母亲|"
+            r"收入|财产|资产|净资产|性格|education|university|degree|biography|born|family|"
+            r"spouse|husband|wife|income|asset|net worth|educa[cç][aã]o|fam[ií]lia|patrim[oó]nio"
+        ),
+    },
+    "employment": {
+        "title": "在职在岗（单位/在岗/岗位职能）",
+        "fields": ["organization", "current_role", "job_functions"],
+        "pattern": (
+            r"现任|任职|职位|职务|单位|机构|组织|职责|职能|负责|工作|影响力|"
+            r"current role|position|employer|organization|responsibilit|job function|"
+            r"cargo|fun[cç][aã]o|organiza[cç][aã]o|responsabil"
+        ),
+    },
+    "network": {
+        "title": "人脉资源（逐人履历/影响力/关系依据）",
+        "fields": ["network"],
+        "pattern": (
+            r"人脉|关系|共事|合作|同事|朋友|伙伴|圈层|团队|"
+            r"network|relationship|colleague|associate|partner|worked with|"
+            r"rela[cç][aã]o|colega|parceir|equipa"
+        ),
+    },
+    "politics": {
+        "title": "政治立场（对华/所在国/对美）",
+        "fields": ["politics_china", "politics_domestic", "politics_us"],
+        "pattern": (
+            r"对华|中国|中美|美国|对美|政治|党派|政策|政府|领导人|立场|表态|"
+            r"china|chinese|united states|\bu\.?s\.?\b|america|politic|party|policy|government|"
+            r"china|estados unidos|pol[ií]tica|governo"
+        ),
+    },
+    "risk": {
+        "title": "污点劣迹（争议/处分/诉讼/违法）",
+        "fields": ["risk"],
+        "pattern": (
+            r"污点|劣迹|争议|指控|处分|诉讼|违法|犯罪|丑闻|赌博|吸毒|"
+            r"scandal|controvers|accus|disciplin|lawsuit|crime|fraud|"
+            r"esc[aâ]ndalo|controv[eé]rs|acusa[cç]|processo|crime"
+        ),
+    },
+    "expression": {
+        "title": "公开表达（发言/采访/演讲/署名文章）",
+        "fields": ["public_expression"],
+        "pattern": (
+            r"公开表达|发言|表态|观点|采访|访谈|演讲|讲话|文章|专栏|视频|"
+            r"interview|speech|statement|opinion|article|column|talk|"
+            r"entrevista|discurso|declara[cç][aã]o|artigo|opini[aã]o"
+        ),
+    },
+}
 # 步骤5 vision 安静期：图片流已齐后仍等模型可能继续发的 vision
 _STEP5_VISION_SETTLE_SECONDS = 5  # 批次闭环：图片齐后短安静期即收口，不再等 25s
 _VISION_TOOL_NAMES = ("vision_analyze", "mcp_vision_analyze", "mcp_ocr_perform_ocr", "mcp_ocr_perform_batch_ocr")
@@ -1628,6 +1690,203 @@ def _identity_finished_at(task_id: str) -> Any:
     return (row or {}).get("finished_at")
 
 
+def _load_web_coverage(task_id: str) -> Dict[str, Any]:
+    """读取 step4 payload 中的模板覆盖状态。"""
+    from collect_01 import db as _db
+
+    row = _db.fetch_one(
+        """
+        SELECT payload_json FROM collect_phase_steps
+        WHERE task_id=%s AND step_key IN ('step4_osint_web', 'step2_osint_web')
+        ORDER BY CASE WHEN step_key='step4_osint_web' THEN 0 ELSE 1 END
+        LIMIT 1
+        """,
+        (task_id,),
+    )
+    raw = (row or {}).get("payload_json")
+    if isinstance(raw, dict):
+        payload = raw
+    else:
+        try:
+            payload = json.loads(raw or "{}")
+        except Exception:
+            payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+    coverage = payload.get("template_coverage")
+    return coverage if isinstance(coverage, dict) else {}
+
+
+def _classify_web_coverage_topics(tool_args: Dict[str, Any], tool_output: str) -> List[str]:
+    """按查询词/返回摘要归入 DOCX 模板资料组；一个组合查询可覆盖多组。"""
+    args_text = json.dumps(tool_args or {}, ensure_ascii=False, default=str)
+    query = str(
+        (tool_args or {}).get("query")
+        or (tool_args or {}).get("search_query")
+        or ""
+    ).strip()
+    # 搜索工具只按用户查询词归类，避免结果页偶然词汇误点亮其它模板项；
+    # extract/browser 无查询词时才用正文摘要归类。
+    blob = (query or (args_text + "\n" + str(tool_output or "")[:6000])).lower()
+    topics: List[str] = []
+    for key, spec in _WEB_COVERAGE_GROUPS.items():
+        if re.search(str(spec.get("pattern") or ""), blob, re.I):
+            topics.append(key)
+    return topics
+
+
+def _extract_web_coverage_urls(tool_output: str, limit: int = 12) -> List[str]:
+    urls: List[str] = []
+    seen = set()
+    for match in re.findall(r"https?://[^\s\"'<>\\]+", str(tool_output or ""), re.I):
+        url = match.rstrip(".,;:!?)]}，。；：！？")
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        urls.append(url[:1000])
+        if len(urls) >= int(limit):
+            break
+    return urls
+
+
+def web_coverage_missing(task_id: str) -> List[str]:
+    coverage = _load_web_coverage(task_id)
+    missing: List[str] = []
+    for key in _WEB_COVERAGE_GROUPS:
+        raw = coverage.get(key)
+        item = raw if isinstance(raw, dict) else {}
+        if int(item.get("attempts") or 0) <= 0 and str(
+            item.get("status") or ""
+        ) != "not_found_budget_exhausted":
+            missing.append(key)
+    return missing
+
+
+def web_coverage_complete(task_id: str) -> bool:
+    return not web_coverage_missing(task_id)
+
+
+def format_web_coverage_hint(task_id: str) -> str:
+    missing = web_coverage_missing(task_id)
+    if not missing:
+        return "【模板覆盖】六类资料均已专项检索；命中材料可 web_extract，随后收口步骤4。"
+    lines = ["【模板覆盖·仍需检索】请使用姓名+职位/机构完成以下组合查询（可并行）："]
+    for key in missing:
+        lines.append(f"- {key}: {_WEB_COVERAGE_GROUPS[key]['title']}")
+    lines.append("禁止重复已覆盖主题；无结果也算完成该主题检索，终稿对应项写未核实。")
+    return "\n".join(lines)
+
+
+def _update_web_coverage(
+    store: TaskStore,
+    task_id: str,
+    *,
+    tool_name: str,
+    tool_args: Dict[str, Any],
+    tool_output: str,
+) -> None:
+    """成功网页工具后更新模板覆盖与证据 URL 摘要。"""
+    topics = _classify_web_coverage_topics(tool_args, tool_output)
+    if not topics:
+        logger.info("网页工具未识别模板主题 task=%s tool=%s", task_id, tool_name)
+        return
+    coverage = _load_web_coverage(task_id)
+    urls = _extract_web_coverage_urls(
+        json.dumps(tool_args or {}, ensure_ascii=False, default=str)
+        + "\n"
+        + str(tool_output or "")
+    )
+    query = str(
+        (tool_args or {}).get("query")
+        or (tool_args or {}).get("search_query")
+        or (tool_args or {}).get("url")
+        or ""
+    ).strip()
+    has_result = bool(urls)
+    for key in topics:
+        old = coverage.get(key)
+        item = dict(old) if isinstance(old, dict) else {}
+        item["title"] = _WEB_COVERAGE_GROUPS[key]["title"]
+        item["attempts"] = int(item.get("attempts") or 0) + 1
+        item["status"] = "evidence_found" if has_result else "searched_no_result"
+        queries = list(item.get("queries") or [])
+        if query and query not in queries:
+            queries.append(query[:500])
+        item["queries"] = queries[-6:]
+        sources = list(item.get("sources") or [])
+        for url in urls:
+            if url not in sources:
+                sources.append(url)
+        item["sources"] = sources[-20:]
+        coverage[key] = item
+
+    field_status: Dict[str, str] = {}
+    for key, spec in _WEB_COVERAGE_GROUPS.items():
+        item = coverage.get(key) or {}
+        state = str(item.get("status") or "pending")
+        for field in spec.get("fields") or []:
+            field_status[str(field)] = state
+    complete = all(
+        int((coverage.get(key) or {}).get("attempts") or 0) > 0
+        or str((coverage.get(key) or {}).get("status") or "") == "not_found_budget_exhausted"
+        for key in _WEB_COVERAGE_GROUPS
+    )
+    current = get_step_status(task_id, OSINT_WEB_STEP_KEY) or "running"
+    store.set_step_status(
+        task_id,
+        OSINT_WEB_STEP_KEY,
+        current,
+        payload={
+            "template_coverage": coverage,
+            "template_field_status": field_status,
+            "coverage_complete": complete,
+        },
+        touch_updated_at=False,
+    )
+
+
+def _finalize_web_coverage_by_budget(
+    store: TaskStore,
+    task_id: str,
+    reason: str,
+) -> None:
+    """硬预算耗尽：未专项检索项显式标记，禁止静默缺字段。"""
+    coverage = _load_web_coverage(task_id)
+    for key, spec in _WEB_COVERAGE_GROUPS.items():
+        item = coverage.get(key)
+        item = dict(item) if isinstance(item, dict) else {}
+        if int(item.get("attempts") or 0) <= 0:
+            item.update(
+                {
+                    "title": spec["title"],
+                    "attempts": 0,
+                    "status": "not_found_budget_exhausted",
+                    "queries": list(item.get("queries") or []),
+                    "sources": list(item.get("sources") or []),
+                }
+            )
+        coverage[key] = item
+    field_status: Dict[str, str] = {}
+    for key, spec in _WEB_COVERAGE_GROUPS.items():
+        state = str((coverage.get(key) or {}).get("status") or "not_found_budget_exhausted")
+        for field in spec.get("fields") or []:
+            field_status[str(field)] = state
+    current = get_step_status(task_id, OSINT_WEB_STEP_KEY) or "running"
+    store.set_step_status(
+        task_id,
+        OSINT_WEB_STEP_KEY,
+        current,
+        payload={
+            "template_coverage": coverage,
+            "template_field_status": field_status,
+            "coverage_complete": True,
+            "coverage_forced": True,
+            "coverage_forced_reason": str(reason or "")[:200],
+        },
+        touch_updated_at=False,
+    )
+
+
 def _step3_threshold_met(task_id: str) -> tuple[bool, int, int, int]:
     from collect_01 import db as _db
 
@@ -1649,11 +1908,14 @@ def _step3_threshold_met(task_id: str) -> tuple[bool, int, int, int]:
     n_search = int((row or {}).get("n_search") or 0)
     n_extract = int((row or {}).get("n_extract") or 0)
     n_browser = int((row or {}).get("n_browser") or 0)
-    ok = (
-        n_extract >= 1
-        or n_browser >= 1
-        or n_search >= int(_STEP3_MIN_SEARCH_FOR_DONE)
-    )
+    try:
+        from report_04.gates import is_v3_report_tree
+
+        ok = web_coverage_complete(task_id) if is_v3_report_tree(task_id) else (
+            n_extract >= 1 or n_browser >= 1 or n_search >= 2
+        )
+    except Exception:
+        ok = n_extract >= 1 or n_browser >= 1 or n_search >= 2
     return ok, n_search, n_extract, n_browser
 
 
@@ -1789,6 +2051,7 @@ def _force_complete_step3_by_budget(store: TaskStore, task_id: str) -> bool:
     reason = step3_web_budget_exhausted(task_id)
     if not reason or reason == "already_done":
         return False
+    _finalize_web_coverage_by_budget(store, task_id, str(reason))
     ok, n_search, n_extract, _n_browser = _step3_threshold_met(task_id)
     _ = ok
     msg = "网页检索完成"
@@ -1822,6 +2085,20 @@ def _try_complete_step3_if_quiet(store: TaskStore, task_id: str) -> bool:
     ok, n_search, n_extract, _n_browser = _step3_threshold_met(task_id)
     if not ok:
         return False
+    try:
+        from report_04.gates import is_v3_report_tree
+
+        if is_v3_report_tree(task_id) and web_coverage_complete(task_id):
+            _complete_step3_now(
+                store,
+                task_id,
+                n_search=n_search,
+                n_extract=n_extract,
+                message="模板资料六类覆盖完成",
+            )
+            return True
+    except Exception:
+        pass
     age = seconds_since_last_tool(task_id, phase_prefix=OSINT_WEB_STEP_KEY)
     if age is None:
         age = seconds_since_last_tool(task_id, phase_prefix="step2_osint_web")
@@ -2865,12 +3142,21 @@ def _on_post_tool(payload: Dict[str, Any]) -> None:
         return
 
     platform_hint = _LAST_APIFY_HINT.get(task_id, "")
+    account_id = _extract_account_id(tool_args if isinstance(tool_args, dict) else {})
     if tool_name == "mcp_apify_get_dataset_items":
         ds_id = str(tool_args.get("datasetId") or tool_args.get("dataset_id") or "").strip()
         platform_hint = resolve_apify_platform_hint(
             task_id, tool_output_id, dataset_id=ds_id or None
         )
         platform = _infer_platform(tool_name, tool_args, store.get_seed_accounts(task_id), platform_hint) or platform
+        if not account_id:
+            try:
+                actor_args = resolve_apify_actor_tool_args(
+                    task_id, dataset_id=ds_id or None, before_output_id=tool_output_id
+                )
+                account_id = _extract_account_id(actor_args)
+            except Exception:
+                account_id = account_id
         if seed_collect:
             output_step_key = "step1_seed"
             collect_step = None
@@ -2886,7 +3172,7 @@ def _on_post_tool(payload: Dict[str, Any]) -> None:
         "tool_output_id": tool_output_id,
         "tool_name": tool_name,
         "tool_args": tool_args,
-        "account_id": _extract_account_id(tool_args),
+        "account_id": account_id,
         "platform_hint": platform_hint,
     }
 
@@ -3075,6 +3361,13 @@ def _on_post_tool(payload: Dict[str, Any]) -> None:
                         task_id,
                         cur_web,
                     )
+            _update_web_coverage(
+                store,
+                task_id,
+                tool_name=tool_name,
+                tool_args=tool_args if isinstance(tool_args, dict) else {},
+                tool_output=tool_output,
+            )
             # 旧路径：网页候选入库（v3 认定后备料，不再扩账号）
             _save_step3_candidates_from_tool(store, task_id, tool_name, result)
             _maybe_complete_step3_after_web_tool(store, task_id, tool_name)
@@ -3650,8 +3943,4 @@ def _on_session_end(payload: Dict[str, Any]) -> None:
 
 
 def _extract_account_id(tool_args: Dict[str, Any]) -> Optional[str]:
-    for key in ("user_id", "username", "screen_name", "channelId", "channel_id", "uid"):
-        val = tool_args.get(key)
-        if val:
-            return str(val)
-    return None
+    return account_id_from_tool_args(tool_args)

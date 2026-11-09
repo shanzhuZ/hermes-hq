@@ -8,6 +8,7 @@ import re
 from typing import Any, Dict, List, Optional
 
 from collect_01.normalizers.base import (
+    account_id_from_tool_args,
     first_str,
     parse_fuzzy_count,
     post_row,
@@ -69,6 +70,51 @@ def resolve_apify_platform_hint(
     if not row:
         return ""
     return str(row["tool_name"]).replace("mcp_apify_", "")
+
+
+def resolve_apify_actor_tool_args(
+    task_id: str,
+    dataset_id: Optional[str] = None,
+    before_output_id: Optional[int] = None,
+) -> Dict[str, Any]:
+    """反查产出该 dataset 的 Actor 入参。get_dataset_items 自身没有 targetUrls。"""
+    from collect_01 import db
+
+    ds = str(dataset_id or "").strip()
+    sql = """
+        SELECT tool_name, tool_args, tool_output FROM hermes_tool_outputs
+        WHERE task_id=%s AND status='success'
+          AND tool_name LIKE 'mcp_apify_%%'
+          AND tool_name NOT IN ('mcp_apify_get_dataset_items', 'mcp_apify_get_actor_run')
+    """
+    args: list = [task_id]
+    if before_output_id is not None:
+        sql += " AND id < %s"
+        args.append(before_output_id)
+    sql += " ORDER BY id DESC"
+    rows = db.fetch_all(sql, tuple(args)) or []
+    picked = None
+    for row in rows:
+        out = str(row.get("tool_output") or "")
+        if ds and ds in out:
+            picked = row
+            break
+        if not ds and picked is None:
+            picked = row
+    if picked is None and rows:
+        picked = rows[0]
+    if not picked:
+        return {}
+    raw_args = picked.get("tool_args")
+    if isinstance(raw_args, dict):
+        return raw_args
+    if isinstance(raw_args, str) and raw_args.strip():
+        try:
+            parsed = json.loads(raw_args)
+            return parsed if isinstance(parsed, dict) else {}
+        except Exception:
+            return {}
+    return {}
 
 
 def apify_platform_from_actor_tool(tool_name: str) -> str:
@@ -618,11 +664,120 @@ def _linkedin_handle_from_url(url: str) -> str:
     return m.group(1) if m else ""
 
 
+def _linkedin_post_id_from_url(url: str) -> str:
+    text = (url or "").strip()
+    m = re.search(r"urn:li:(?:ugcPost|activity|share):[0-9]+", text, re.I)
+    return m.group(0) if m else ""
+
+
+def _item_val(item: Dict[str, Any], *keys: str) -> Any:
+    """兼容扁平点号键与嵌套 dict，如 author.publicIdentifier / author['publicIdentifier']。"""
+    for key in keys:
+        if not key:
+            continue
+        if key in item and item.get(key) not in (None, "", [], {}):
+            return item.get(key)
+        if "." not in key:
+            continue
+        cur: Any = item
+        ok = True
+        for part in key.split("."):
+            if isinstance(cur, dict) and part in cur:
+                cur = cur.get(part)
+            else:
+                ok = False
+                break
+        if ok and cur not in (None, "", [], {}):
+            return cur
+    return None
+
+
+def _same_linkedin_account(left: str, right: str) -> bool:
+    a = (left or "").strip().lower().lstrip("@")
+    b = (right or "").strip().lower().lstrip("@")
+    return bool(a and b and a == b)
+
+
+def _linkedin_profile_fallback(ctx: Dict[str, Any]) -> Dict[str, str]:
+    """本任务已入库 LinkedIn 主页，供发文 account_id 对齐（避免 unknown）。"""
+    cached = ctx.get("_linkedin_profile")
+    if isinstance(cached, dict):
+        return cached
+    result = {"account_id": "", "account_handle": ""}
+    hint = first_str(ctx.get("account_handle"), ctx.get("account_id")) or ""
+    if not hint:
+        args = ctx.get("tool_args") if isinstance(ctx.get("tool_args"), dict) else {}
+        hint = account_id_from_tool_args(args) or ""
+    if not hint:
+        args = ctx.get("tool_args") if isinstance(ctx.get("tool_args"), dict) else {}
+        ds = str(args.get("datasetId") or args.get("dataset_id") or "").strip()
+        task_id = str(ctx.get("task_id") or "")
+        if task_id:
+            try:
+                actor_args = resolve_apify_actor_tool_args(
+                    task_id,
+                    dataset_id=ds or None,
+                    before_output_id=ctx.get("tool_output_id"),
+                )
+                hint = account_id_from_tool_args(actor_args) or ""
+            except Exception:
+                hint = hint
+    task_id = str(ctx.get("task_id") or "")
+    if task_id:
+        try:
+            from collect_01 import db
+
+            prow = None
+            if hint:
+                like = f"%{hint.lstrip('@')}%"
+                prow = db.fetch_one(
+                    """
+                    SELECT account_id, account_handle FROM collect_profiles
+                    WHERE task_id=%s AND platform='linkedin'
+                      AND (
+                        LOWER(account_handle)=LOWER(%s)
+                        OR LOWER(account_id)=LOWER(%s)
+                        OR LOWER(IFNULL(profile_url,'')) LIKE %s
+                      )
+                    LIMIT 1
+                    """,
+                    (task_id, hint.lstrip("@"), hint.lstrip("@"), like),
+                )
+            if not prow:
+                prow = db.fetch_one(
+                    """
+                    SELECT account_id, account_handle FROM collect_profiles
+                    WHERE task_id=%s AND platform='linkedin'
+                    ORDER BY id ASC
+                    LIMIT 1
+                    """,
+                    (task_id,),
+                )
+            if prow:
+                result = {
+                    "account_id": first_str(prow.get("account_id"), prow.get("account_handle"), hint) or "",
+                    "account_handle": first_str(prow.get("account_handle"), hint) or "",
+                }
+        except Exception:
+            pass
+    if not result.get("account_id") and hint:
+        result = {"account_id": hint, "account_handle": hint}
+    ctx["_linkedin_profile"] = result
+    return result
+
+
 def _linkedin_items(ctx: Dict[str, Any], items: List[Any]):
     """harvestapi LinkedIn profile / posts dataset → profiles + posts。"""
     profiles: List[Dict[str, Any]] = []
     posts: List[Dict[str, Any]] = []
-    default_handle = first_str(ctx.get("account_handle"), ctx.get("account_id")) or ""
+    prof = _linkedin_profile_fallback(ctx)
+    default_handle = first_str(
+        ctx.get("account_handle"),
+        ctx.get("account_id"),
+        prof.get("account_handle"),
+        prof.get("account_id"),
+    ) or ""
+    default_account_id = first_str(prof.get("account_id"), default_handle) or ""
     for item in items:
         if not isinstance(item, dict):
             continue
@@ -630,7 +785,9 @@ def _linkedin_items(ctx: Dict[str, Any], items: List[Any]):
             continue
         handle = first_str(
             item.get("publicIdentifier"),
-            _linkedin_handle_from_url(str(item.get("linkedinUrl") or item.get("url") or "")),
+            _linkedin_handle_from_url(
+                str(_item_val(item, "linkedinUrl", "url", "author.linkedinUrl") or "")
+            ),
             default_handle,
         )
         post_text = first_str(
@@ -644,13 +801,23 @@ def _linkedin_items(ctx: Dict[str, Any], items: List[Any]):
             item.get("urn"),
             item.get("postUrn"),
             item.get("activityId"),
+            item.get("entityId"),
+            item.get("shareUrn"),
+            _linkedin_post_id_from_url(
+                str(item.get("shareLinkedinUrl") or item.get("linkedinUrl") or "")
+            ),
         )
+        # 主页行的 id 是 ACoA…，只有明确是发文才用 id
+        if str(item.get("type") or "").lower() == "post":
+            post_id = first_str(post_id, item.get("id"))
         looks_like_post = bool(
             post_text
             or item.get("postedAt")
+            or item.get("postedAt.date")
             or item.get("postedDate")
             or item.get("publishedAt")
             or post_id
+            or str(item.get("type") or "").lower() == "post"
         ) and not (
             item.get("publicIdentifier") and item.get("headline") and not post_text and not post_id
         )
@@ -696,17 +863,36 @@ def _linkedin_items(ctx: Dict[str, Any], items: List[Any]):
                 )
             continue
         if looks_like_post and (post_id or post_text):
-            author = first_str(
-                item.get("authorPublicIdentifier"),
-                item.get("authorUsername"),
-                _linkedin_handle_from_url(str(item.get("authorUrl") or "")),
-                handle,
-                default_handle,
-            ) or "unknown"
+            item_author = first_str(
+                _item_val(
+                    item,
+                    "author.publicIdentifier",
+                    "authorPublicIdentifier",
+                    "author.universalName",
+                    "authorUsername",
+                ),
+                _linkedin_handle_from_url(
+                    str(_item_val(item, "author.linkedinUrl", "authorUrl", "author.url") or "")
+                ),
+                first_str(_item_val(item, "author.id", "authorId")),
+                handle if handle != default_handle else None,
+            )
+            if item_author and not (
+                _same_linkedin_account(item_author, default_account_id)
+                or _same_linkedin_account(item_author, default_handle)
+                or _same_linkedin_account(item_author, str(prof.get("account_handle") or ""))
+            ):
+                author = item_author
+            else:
+                author = default_account_id or item_author or default_handle or "unknown"
+            content_url = first_str(
+                item.get("linkedinUrl"),
+                item.get("postUrl"),
+                item.get("url"),
+                item.get("shareLinkedinUrl"),
+            )
             cid = post_id or hashlib.sha1(
-                f"{author}|{post_text}|{first_str(item.get('linkedinUrl'), item.get('url'))}".encode(
-                    "utf-8", errors="ignore"
-                )
+                f"{author}|{post_text}|{content_url or ''}".encode("utf-8", errors="ignore")
             ).hexdigest()[:20]
             posts.append(
                 post_row(
@@ -715,19 +901,29 @@ def _linkedin_items(ctx: Dict[str, Any], items: List[Any]):
                     account_id=author,
                     content_id=str(cid),
                     content_type="post",
-                    title=first_str(item.get("title")),
+                    title=first_str(item.get("title"), _item_val(item, "article.title")),
                     content_text=post_text,
-                    content_url=first_str(item.get("linkedinUrl"), item.get("postUrl"), item.get("url")),
+                    content_url=content_url,
                     published_at=published_at_from_item(
-                        item, "postedAt", "postedDate", "publishedAt", "createdAt", "timestamp"
+                        item,
+                        "postedAt",
+                        "postedAt.date",
+                        "postedDate",
+                        "publishedAt",
+                        "createdAt",
+                        "timestamp",
                     ),
                     like_count=safe_int(
-                        item.get("numLikes") or item.get("likesCount") or item.get("reactionCount")
+                        item.get("numLikes")
+                        or item.get("likesCount")
+                        or item.get("reactionCount")
+                        or _item_val(item, "engagement.likes")
                     ),
                     comment_count=safe_int(
                         item.get("numComments")
                         or item.get("commentsCount")
                         or item.get("commentCount")
+                        or _item_val(item, "engagement.comments")
                     ),
                     repost_count=safe_int(
                         item.get("numShares") or item.get("repostsCount") or item.get("shareCount")

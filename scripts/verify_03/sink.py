@@ -283,6 +283,43 @@ def _try_parse_step1(store: TaskStore, task_id: str, assistant: str, user_messag
     logger.info("步骤1 解析账号 task=%s count=%d", task_id, len(accounts))
 
 
+def _fail_forward_step1_from_profiles(store: TaskStore, task_id: str) -> bool:
+    """步骤1解析仍空，但已有主页入库：按已采平台反推种子并收口，禁止永久 running。"""
+    from collect_01 import db as _db
+
+    rows = _db.fetch_all(
+        """
+        SELECT platform, account_handle, account_id
+        FROM collect_profiles
+        WHERE task_id=%s
+        ORDER BY id ASC
+        """,
+        (task_id,),
+    )
+    accounts = []
+    for row in rows or []:
+        plat = str(row.get("platform") or "").strip().lower()
+        handle = str(row.get("account_handle") or row.get("account_id") or "").strip()
+        if not plat or not handle:
+            continue
+        accounts.append(
+            {
+                "platform": plat,
+                "account_handle": handle,
+                "account_id": handle,
+            }
+        )
+    if not accounts:
+        return False
+    store.save_input_accounts(task_id, accounts, source="fail_forward_profiles")
+    logger.warning(
+        "步骤1 fail-forward(已有主页反推) task=%s count=%d",
+        task_id,
+        len(accounts),
+    )
+    return True
+
+
 def _ensure_step1_completed(
     store: TaskStore,
     task_id: str,
@@ -290,21 +327,40 @@ def _ensure_step1_completed(
     user_message: str = "",
     session_id: Optional[str] = None,
 ) -> None:
-    """post_llm 未触发时：从 Agent 表格或用户原始输入兜底完成步骤一。"""
+    """从 Agent 确认/用户原文/语义抽取兜底完成步骤一；仍空且已有主页则 fail-forward。"""
     if get_step_status(task_id, "step1_input_accounts") == "completed":
         return
     assistant = _load_assistant_for_step1(session_id or "")
+    msg = user_message.strip() or store.load_user_input_message(task_id)
+    # 合并助手确认 + 用户原文，走放宽/语义解析
+    accounts = parse_input_accounts(user_message=msg, assistant_text=assistant or "")
+    if accounts:
+        source = "agent" if assistant and looks_like_step1_confirmation(assistant) else "user_input"
+        store.save_input_accounts(task_id, accounts, source=source)
+        logger.info(
+            "步骤1 兜底解析 task=%s source=%s count=%d",
+            task_id,
+            source,
+            len(accounts),
+        )
+        return
     if assistant and looks_like_step1_confirmation(assistant):
-        accounts = parse_input_accounts(user_message=user_message, assistant_text=assistant)
+        accounts = parse_input_accounts(user_message="", assistant_text=assistant)
         if accounts:
             store.save_input_accounts(task_id, accounts, source="agent")
             logger.info("步骤1 兜底(assistant) task=%s count=%d", task_id, len(accounts))
             return
-    msg = user_message.strip() or store.load_user_input_message(task_id)
-    accounts = parse_input_accounts(user_message=msg, assistant_text="")
-    if accounts:
-        store.save_input_accounts(task_id, accounts, source="user_input")
-        logger.info("步骤1 兜底(user_input) task=%s count=%d", task_id, len(accounts))
+    if msg:
+        accounts = parse_input_accounts(user_message=msg, assistant_text="")
+        if accounts:
+            store.save_input_accounts(task_id, accounts, source="user_input")
+            logger.info("步骤1 兜底(user_input) task=%s count=%d", task_id, len(accounts))
+            return
+    # 已往下采集却仍关不上步骤1：按主页反推
+    try:
+        _fail_forward_step1_from_profiles(store, task_id)
+    except Exception as exc:
+        logger.warning("步骤1 fail-forward 失败 task=%s: %s", task_id, exc)
 
 
 def _load_assistant_for_step1(session_id: str) -> str:

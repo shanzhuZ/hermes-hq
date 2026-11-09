@@ -327,7 +327,12 @@ class TaskStore:
         _save_seed(task_id, seed)
         self._sync_input_accounts_display(task_id, accounts)
         self.ensure_profile_platform_steps(task_id, accounts)
-        src_label = "Agent 确认" if source == "agent" else "用户输入解析"
+        if source == "agent":
+            src_label = "Agent 确认"
+        elif source == "fail_forward_profiles":
+            src_label = "主页反推收口"
+        else:
+            src_label = "用户输入解析"
         self.set_step_status(
             task_id,
             "step1_input_accounts",

@@ -1660,21 +1660,6 @@ def ensure_step7_parent_active(store: Any, task_id: str) -> int:
             message="发文采集中（晚到补采）" if has_running else "等待发文采集（晚到子节点）",
             force_reopen=True,
         )
-        # 写报若已抢跑点亮，退回 pending，避免「发文未齐却空撞写报工具」
-        s_report = get_step_status(task_id, "step7_report")
-        if s_report == "running":
-            try:
-                store.set_step_status(
-                    task_id,
-                    "step7_report",
-                    "pending",
-                    message="等待发文/视频齐后再写终稿",
-                    force_reopen=True,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "晚到补采回退 step7_report 失败 task=%s: %s", task_id, exc
-                )
         logger.info(
             "step7 晚到子节点，回开父步骤 task=%s running=%s pending=%s",
             task_id,

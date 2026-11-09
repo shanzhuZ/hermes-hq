@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 
 /**
  * 前端 taskType → 库内 task_type、Hermes skill 名、发往模型的消息前缀。
- * hermes-hq：仅保留 04 画像写报（report / profile）。
+ * hermes-hq：01 采集 / 02 扩建 / 03 核查 / 04 写报；默认回退 report（保护写报）。
  */
 @Component
 public class TaskTypeRegistry {
@@ -19,12 +19,20 @@ public class TaskTypeRegistry {
     public static final String DEFAULT_FRONTEND_TYPE = "report";
 
     private static final Pattern SKILL_PREFIX = Pattern.compile(
-            "^(account-intelligence-report|account-intelligence-profile)\\b",
+            "^(account-intelligence-collect|account-expansion|account-intelligence-expand|"
+                    + "account-intelligence-verification|account-intelligence-verify|"
+                    + "account-intelligence-report|account-intelligence-profile)\\b",
             Pattern.CASE_INSENSITIVE);
 
     private final Map<String, TaskTypeDef> byFrontendType = new HashMap<String, TaskTypeDef>();
 
     public TaskTypeRegistry() {
+        byFrontendType.put("collect", new TaskTypeDef(
+                "collect", "account_collect", "account-intelligence-collect", "账号信息采集"));
+        byFrontendType.put("expand", new TaskTypeDef(
+                "expand", "account_expand", "account-expansion", "账号扩建"));
+        byFrontendType.put("verify", new TaskTypeDef(
+                "verify", "account_verify", "account-intelligence-verification", "账号核查"));
         byFrontendType.put("report", new TaskTypeDef(
                 "report", "account_report", "account-intelligence-report", "画像写报"));
         byFrontendType.put("profile", new TaskTypeDef(
@@ -62,10 +70,19 @@ public class TaskTypeRegistry {
     }
 
     /**
-     * 判断用户消息是否匹配某 task_type 的意图。
+     * 判断用户消息是否匹配某 task_type 的意图（Hook 兜底用，Java 侧与 Python 规则近似）。
      */
     public boolean matchesIntent(String dbTaskType, String userMessage) {
         String msg = userMessage == null ? "" : userMessage;
+        if ("account_expand".equals(dbTaskType)) {
+            return msg.matches("(?is).*(account-expansion|account-intelligence-expand|账号扩建|扩建).*");
+        }
+        if ("account_collect".equals(dbTaskType)) {
+            return msg.matches("(?is).*(account-intelligence-collect|账号信息采集|采集).*");
+        }
+        if ("account_verify".equals(dbTaskType)) {
+            return msg.matches("(?is).*(account-intelligence-verification|account-intelligence-verify|账号核查|核查).*");
+        }
         if ("account_report".equals(dbTaskType)) {
             return msg.matches("(?is).*(account-intelligence-report|account-intelligence-profile|画像写报|公开资料核查|写报).*");
         }
@@ -73,7 +90,7 @@ public class TaskTypeRegistry {
     }
 
     /**
-     * 解析前端短码或库内 task_type；无法识别返回 null。
+     * 解析前端短码或库内 task_type；无法识别返回 null（不做 collect 回退）。
      */
     public TaskTypeDef resolveExact(String type) {
         if (type == null || type.trim().isEmpty()) {
@@ -83,6 +100,15 @@ public class TaskTypeRegistry {
         TaskTypeDef byFrontend = byFrontendType.get(key);
         if (byFrontend != null) {
             return byFrontend;
+        }
+        if ("account_collect".equals(key)) {
+            return byFrontendType.get("collect");
+        }
+        if ("account_expand".equals(key)) {
+            return byFrontendType.get("expand");
+        }
+        if ("account_verify".equals(key)) {
+            return byFrontendType.get("verify");
         }
         if ("account_report".equals(key)) {
             return byFrontendType.get("report");
@@ -106,6 +132,7 @@ public class TaskTypeRegistry {
         if (def == null) {
             return "";
         }
+        // profile 与 report 同库类型，统一对外短码 report
         if ("profile".equals(def.getFrontendType())) {
             return "report";
         }
@@ -113,10 +140,13 @@ public class TaskTypeRegistry {
     }
 
     /**
-     * 对外业务枚举（仅写报）。
+     * 对外业务枚举（不含 profile 别名；不含 custom）。
      */
     public List<TaskTypeDef> listPublicTypes() {
         List<TaskTypeDef> list = new ArrayList<TaskTypeDef>();
+        list.add(byFrontendType.get("collect"));
+        list.add(byFrontendType.get("expand"));
+        list.add(byFrontendType.get("verify"));
         list.add(byFrontendType.get("report"));
         return list;
     }

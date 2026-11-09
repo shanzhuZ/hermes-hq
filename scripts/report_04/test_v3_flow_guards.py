@@ -288,11 +288,28 @@ class V3FlowGuardTest(unittest.TestCase):
             report_parser.is_final_report(self._current_template_report())
         )
 
-    def test_current_docx_report_missing_fixed_item_is_soft_accepted(self):
-        # 严格模板仍判缺项；收口放宽：八章齐全且多数二级项在即可
-        body = self._current_template_report(include_economy=False)
-        self.assertFalse(report_parser.follows_current_report_template(body))
-        self.assertTrue(report_parser.is_final_report(body))
+    def test_current_docx_report_missing_fixed_item_is_rejected(self):
+        # soft 收口：单缺「经济状况」仍可过；大面积缺二级项才拒收
+        thin = (
+            self._current_template_report()
+            .replace("（一）教育经历\n未核实。\n", "")
+            .replace("（二）工作经历\n未核实。\n", "")
+            .replace("（三）性格特点\n未核实，未作推断。\n", "")
+            .replace("（四）家庭成员情况\n未核实。\n", "")
+            .replace("（五）经济状况\n未获取可核实信息。\n", "")
+        )
+        self.assertFalse(report_parser.is_final_report(thin))
+
+    def test_abbreviated_subsection_titles_are_accepted(self):
+        """二级标题常见缩写（家庭成员/工作单位）允许入库。"""
+        report = (
+            self._current_template_report()
+            .replace("（四）家庭成员情况", "（四）家庭成员")
+            .replace("（一）工作单位基本情况", "（一）工作单位")
+        )
+        self.assertTrue(report_parser.follows_current_report_template_soft(report))
+        self.assertTrue(report_parser.is_final_report(report))
+        self.assertFalse(report_parser.follows_current_report_template(report))
 
     def test_named_header_and_optional_photo_are_preserved(self):
         report = self._current_template_report().replace(
@@ -310,7 +327,7 @@ class V3FlowGuardTest(unittest.TestCase):
             )
         )
 
-    def test_generic_header_is_rejected_but_photo_placeholder_is_stripped(self):
+    def test_generic_header_or_photo_placeholder_is_rejected(self):
         generic = self._current_template_report().replace(
             "测试人物 公开资料核查报告",
             "公开资料核查报告",
@@ -322,12 +339,7 @@ class V3FlowGuardTest(unittest.TestCase):
             "测试人物 公开资料核查报告\n照片来源：暂无照片\n",
             1,
         )
-        # 占位照片剥掉后结构合格即可收，不再整篇打回
-        self.assertTrue(report_parser.is_final_report(placeholder))
-        self.assertNotIn(
-            "暂无照片",
-            report_parser.prepare_final_report_body(placeholder),
-        )
+        self.assertFalse(report_parser.is_final_report(placeholder))
 
     def test_web_coverage_classifier_uses_template_topics(self):
         topics = sink._classify_web_coverage_topics(
@@ -547,112 +559,6 @@ class V3FlowGuardTest(unittest.TestCase):
             "ACoAABZVUs4B6iEFBV809kPH8F0NL7imon9PeXA",
             posts[0]["account_id"],
         )
-
-    def test_report_phase_blocks_all_tools_when_write_ready(self):
-        with patch.object(orchestrator, "infer_gate_step", return_value="step7_report"), \
-                patch(
-                    "report_04.video_report.can_write_report_after_videos",
-                    return_value={"ok": True},
-                ), \
-                patch(
-                    "report_04.engine.build_report_materials_pack",
-                    return_value="【写报材料包·已入库摘要】\n- 对象：测试",
-                ):
-            reason = orchestrator.block_tool_reason(
-                "task-v3", "web_search", phase="step7_report"
-            )
-            self.assertIsNotNone(reason)
-            self.assertIn("禁止调用 web_search", reason)
-            self.assertIn("八章", reason)
-            self.assertIn("写报材料包", reason)
-            reason2 = orchestrator.block_tool_reason(
-                "task-v3", "write_file", phase="step7_report"
-            )
-            self.assertIsNotNone(reason2)
-            self.assertIn("write_file", reason2)
-
-    def test_advance_does_not_light_report_before_write_gate(self):
-        store = _FakeStore()
-        with patch.object(orchestrator, "report_prerequisites_ready", create=True), \
-                patch("report_04.gates.report_prerequisites_ready", return_value=True), \
-                patch(
-                    "report_04.step_reconcile.list_unattempted_post_platforms",
-                    return_value=[],
-                ), \
-                patch(
-                    "report_04.step_reconcile._post_collect_attempted",
-                    return_value=True,
-                ), \
-                patch(
-                    "report_04.step_reconcile.close_collect_parent_if_ready",
-                    return_value=False,
-                ), \
-                patch.object(orchestrator, "get_step_status") as gs, \
-                patch(
-                    "report_04.video_report.can_write_report_after_videos",
-                    return_value={"ok": False, "message": "视频未齐"},
-                ), \
-                patch("collect_01.db.fetch_all", return_value=[]):
-            def _gs(_tid, key):
-                if key == "step5_posts":
-                    return "completed"
-                if key == "step7_report":
-                    return "pending"
-                return "completed"
-
-            gs.side_effect = _gs
-            store.set_task_phase = Mock()
-            ok = orchestrator.advance_to_analysis_phase(store, "task-v3", "test")
-            lit = [
-                c for c in store.status_calls
-                if c[1] == "step7_report" and c[2] == "running"
-            ]
-            self.assertEqual([], lit)
-
-    def test_materials_pack_includes_profiles_and_posts(self):
-        with patch(
-            "report_04.engine.db.fetch_one",
-            side_effect=[
-                {
-                    "seed_json": (
-                        '{"person_name":"测试人物","job_title":"主任",'
-                        '"org":"机构","platform":"linkedin",'
-                        '"account_hint":"test-person","profile_url":"https://x"}'
-                    ),
-                    "subject_json": None,
-                },
-                {"payload_json": "{}"},
-            ],
-        ), patch(
-            "report_04.engine.db.fetch_all",
-            side_effect=[
-                [
-                    {
-                        "platform": "linkedin",
-                        "account_id": "ACoA1",
-                        "account_handle": "test-person",
-                        "display_name": "测试人物",
-                        "bio": "bio",
-                        "profile_url": "https://x",
-                    }
-                ],
-                [
-                    {
-                        "platform": "linkedin",
-                        "account_id": "ACoA1",
-                        "published_at": "2026-01-01",
-                        "txt": "hello post",
-                        "url": "https://post",
-                    }
-                ],
-            ],
-        ):
-            pack = engine.build_report_materials_pack("task-v3")
-        self.assertIn("测试人物", pack)
-        self.assertIn("已入库主页", pack)
-        self.assertIn("hello post", pack)
-        self.assertIn("禁止再调", pack)
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,159 @@
+# 01 账号采集 — 唯一参考（Skill 只加载本文件）
+version: "1.17.0"
+
+language: 用户中文输入时全程简体中文；步骤1-6.5进度与步骤7报告均不得用英文。
+
+identity: 用户指定的 @种子 为唯一目标；禁止把 Maigret/简介里其他 handle 当种子。
+mode_switch: |
+  若用户明确表示“不需要跨平台 / 不要跨平台 / 仅当前平台 / 单平台 / 只采当前平台”，进入 single_platform 模式：
+  - 禁止调用 mcp_maigret_collect_accounts
+  - 禁止采候选主页
+  - 禁止生成候选 validated_accounts
+  - 只执行：种子主页 → 种子图片/文本分析 → 种子发文采集 → 6.5 图片入库+分析回填 → 等待视频节点终态 → 输出三节
+
+forbidden_always:
+  tools: [web_search, web_extract, browser_*, clarify, mcp_firecrawl_*, mcp_video2frame_run_video_pipeline, mcp_video2frame_download_video]
+  output: [综合画像, 用户画像, 综合介绍, 发展轨迹, 各方评价, 如果你想进一步了解, 四、, 无对应 MCP, 无 MCP 采集工具, 没有对应 MCP, 图片资产管线系统未部署, 跳过步骤 6.5, image_pipeline未部署, 任务 ID 未注册, 继续步骤 7]
+
+# 步骤 4～7 必须自动完成，禁止停下来问用户
+mandatory_auto_steps: [4_streams, 5_validated, 6_posts, 6_5_image_assets, 6_6_video_wait, 7_output]
+never_ask_user: |
+  禁止在步骤 3 之后调用 clarify 询问是否跳过 4～7。
+  无 OCR/vision 时：仍执行文本流比对；图片流仅登记 avatar_url，标为 pending，不得询问用户。
+  步骤 6 发文结束后必须执行 6_5_image_assets（可与后台视频并行），再 6_6_video_wait，再进入步骤 7。
+  步骤 7 必须一次性输出三节，不得因「数据量大」而跳过中间步骤。
+  禁止调用 mcp_video2frame_* 长耗时工具（视频由 Hook 后台跑）。
+
+steps:
+  "1_seed":
+    do: |
+      按用户指定的种子平台采主页（MCP 或 Apify）：
+      【MCP】
+      - twitter → mcp_twitter_get_user_info(screen_name=种子handle)
+      - weibo   → mcp_weibo_get_profile
+      - youtube → mcp_youtube_get_channel_stats(channelId=…)
+      - bilibili→ mcp_bilibili_get_user_info(uid=数字uid)
+      【Apify，必须走三轮：Actor → get_actor_run → get_dataset_items】
+      - instagram → mcp_apify_apify__instagram_scraper
+        input: { directUrls: ["https://www.instagram.com/{u}/"], resultsLimit: 5 }
+      - tiktok → mcp_apify_clockworks__tiktok_scraper
+        input: { profiles: ["https://www.tiktok.com/@{u}"], resultsPerPage: 5 }
+      - telegram → mcp_apify_vujeen__telegram_channel_scraper
+        input: { channels: ["{ch}"], maxPostsPerChannel: 3 }（ch=@名或 t.me/xxx）
+      - facebook → mcp_apify_headlessagent__facebook_profile_post_scraper
+        input: { profileUrls: ["https://www.facebook.com/{u}"], postUrls: [] }
+      - github → mcp_apify_knotless_cadence__github_profile_scraper
+        input: { usernames: ["{u}"], maxRepos: 5 }
+      Apify 种子：Actor 启动成功后轮询 get_actor_run，再 get_dataset_items 取 profile；禁止因「无 MCP」跳过。
+    twitter_args: 参数名必须是 screen_name 或 user_id，禁止 username
+    forbid: [get_user_tweets, maigret, search_username, search_usernames, vision, username参数]
+
+  "2_maigret":
+    when: 用户说跨平台
+    do: mcp_maigret_collect_accounts(username=种子纯用户名，如 whyyoutouzhele)
+    forbid: [search_username, search_usernames, 写报告；follow collect_skill_mode / agent_must_do_next]
+
+  "2_single_platform_streams":
+    when: 用户明确说不需要跨平台
+    do: |
+      仅对种子账号执行文本流 + 图片流分析：
+      - 文本流：昵称/handle/简介/互链/邮箱，只用于三节报告，不生成候选比对表
+      - 图片流：avatar_url → mcp_ocr_perform_ocr(language=chi_sim) + vision_analyze；远程 URL 失败则下载到本地临时文件再重试 1 次
+      - OCR language 只能 chi_sim 或 eng；禁止 eng+chi_sim；失败 1 次后继续 vision，禁止同参盲重试
+    forbid: [mcp_maigret_collect_accounts, mcp_apify_*, mcp_youtube_get_channel_stats, get_user_feeds, 候选主页采集]
+
+  "3_profiles":
+    do: |
+      遍历两类候选（种子 Twitter 平台本身除外）：
+      A) Maigret summary.accounts 每条
+      B) 种子 profile 互链（bio/website/entities 中的 t.me/、instagram.com/、tiktok.com/ 等）——即使 Maigret 未返回该平台也必须纳入步骤3
+      采集方式：
+      - 有 MCP：Twitter/微博/B站/YouTube→仅 profile（YouTube 用 get_channel_stats + channelId，禁止 analyze_channel_videos）
+      - 无原生 MCP：Instagram/TikTok/Telegram/Facebook/GitHub→**必须** Apify 三轮（见 apify 节；Telegram channels 填 @名 或 t.me/xxx 完整 URL）
+      - discovery_only（Discord/ImgInn/Pixwox/GitHubGist 等聚合站）：只记 URL，不调 Apify
+      失败/空数据→跳过该候选；2.4 原因须写「Apify 空/失败」等事实，**禁止**写「无 MCP / 无采集工具」（无 MCP 不等于不能采，应已走 Apify）
+      禁止 web_search，禁止重试超过 1 次
+    forbid: [get_user_tweets, get_user_feeds, analyze_channel_videos, youtube search, vision, ocr, 任何报告文字]
+
+  "4_streams":
+    mandatory: true
+    do: |
+      必须自动执行，禁止 clarify。
+      对步骤3成功的账号 + 种子：
+      文本流：昵称/handle/简介/互链/邮箱 → 与种子比对 → 表 2.1
+      图片流：有 avatar_url → 各 1 次 mcp_ocr_perform_ocr + vision_analyze。
+      若 vision_analyze 直接传远程 URL 失败：先下载头像到本地临时文件，再用本地文件路径重试 1 次；仍失败则登记 avatar_url 并标记为 pending / 403 / invalid_source，继续后续步骤。
+      无工具则登记 URL 为 pending，继续后续步骤
+    forbid: [发文工具, 写最终报告, clarify, 询问用户是否跳过]
+
+  "5_validated":
+    do: validated_accounts = 种子 + 与种子文本/图片流相似的候选（high/medium）；其余进 excluded
+    forbid: [一切发文工具]
+
+  "6_posts":
+    do: |
+      validated 每个账号：
+      - Twitter→get_user_tweets(100)
+      - YouTube→analyze_channel_videos(channelId)
+      - 微博→get_user_feeds
+      - Apify 平台→三轮 resultsLimit=50→get_dataset_items 原文
+      全部发文工具调用结束后必须进入 6_5_image_assets，禁止直接写三节报告
+    forbid: [web_search, 写最终报告]
+
+  "6_single_platform_posts":
+    when: 用户明确说不需要跨平台
+    do: |
+      仅采种子账号发文：
+      - Twitter→get_user_tweets(100)
+      - 微博→get_user_feeds
+      - YouTube 种子→analyze_channel_videos(channelId)
+      - Apify 种子（instagram/tiktok/telegram/facebook/github）→ 三轮 resultsLimit=50→get_dataset_items 原文
+      禁止任何非种子平台发文采集
+      发文结束后必须进入 6_5_image_assets，禁止直接写三节报告
+    forbid: [mcp_maigret_collect_accounts, 非种子平台发文采集]
+
+  "6_5_image_assets":
+    mandatory: true
+    when: 步骤6（或单平台发文）结束后、步骤7之前
+    do: |
+      必须自动执行，禁止 clarify，禁止跳过直接写报告。
+      1) 取得当前 task_id（Gateway task:{uuid} 或会话活跃 account_collect 任务）
+      2) 禁止 search_files / web_search 探测「是否部署」；scripts/image_pipeline 视为已部署
+      3) cd 到仓库 scripts/ 后 terminal 执行：
+         python -m image_pipeline.run --task-id <taskId> --force-analyze
+      4) 该命令：发现头像/封面/发文配图 → 下载 HBase → collect_images → 回填 OCR/Vision
+      5) 读 stdout JSON；对用户最多 1 句进度；失败也继续后续步骤，禁止编造「系统未部署」
+      说明：各平台发文完成后 Hook 可能已后台拉起 6.x.1 视频分析，与本步骤并行。
+    forbid: [写最终报告, 输出一/二/三节, clarify, web_search, search_files, mcp_video2frame_run_video_pipeline]
+
+  "6_6_video_wait":
+    mandatory: true
+    when: 6_5 之后、7_output 之前
+    do: |
+      等待各平台视频子节点（6.x.1）终态；无视频节点则立即通过。
+      cd 到仓库 scripts/ 后 terminal 执行：
+        python -m collect_01.video_report --task-id <taskId>
+      该命令最长约 10 分钟；超时会强制失败视频节点并放行。
+      读 stdout JSON 的 section_markdown；步骤7「三、发文信息」须写入视频观察（有成功结果时）。
+      禁止调用 mcp_video2frame_*。
+    forbid: [写最终报告, mcp_video2frame_run_video_pipeline, mcp_video2frame_download_video, clarify]
+
+  "7_output":
+    once: true
+    require_before: [6_5_image_assets, 6_6_video_wait]
+    must_start_with: "## 一、个人信息"
+    sections: [一、个人信息, 二、账号核验依据, 三、发文信息]
+    section2: [2.1文本流表, 2.2图片流表, 2.3纳入, 2.4未纳入]
+    section3: 每平台一块，MCP/Apify 原文逐条，禁止主题归纳；有视频分析结果时在本节写入「视频观察」
+    forbid_preamble: true
+    forbid_in_body: [步骤 6.5, 图片资产管线, 图片管线, 未部署, 未注册, 跳过步骤, 继续步骤 7, image_pipeline, Hook, 命令行, ModuleNotFoundError, 任务 ID, task_id, ---]
+
+apify:
+  contract: [mcp_apify_<actor>, mcp_apify_get_actor_run, mcp_apify_get_dataset_items]
+  instagram: { tool: mcp_apify_apify__instagram_scraper, input: { directUrls: ["https://www.instagram.com/{u}/"], resultsLimit: 5 } }
+  tiktok: { tool: mcp_apify_clockworks__tiktok_scraper, input: { profiles: ["https://www.tiktok.com/@{u}"], resultsPerPage: 5 } }
+  telegram: { tool: mcp_apify_vujeen__telegram_channel_scraper, input: { channels: ["{ch}"], maxPostsPerChannel: 3 }, note: "ch=频道名或 t.me/xxx；种子 bio 互链也须走此 Actor" }
+  facebook: { tool: mcp_apify_headlessagent__facebook_profile_post_scraper, input: { profileUrls: ["https://www.facebook.com/{u}"], postUrls: [] } }
+  github: { tool: mcp_apify_knotless_cadence__github_profile_scraper, input: { usernames: ["{u}"], maxRepos: 5 } }
+
+midflight: 步骤1-6.5 对用户最多 2 句进度；禁止输出一、二、三、任何一节

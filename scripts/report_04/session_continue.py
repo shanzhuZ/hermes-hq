@@ -646,8 +646,8 @@ def build_next_action_hint(task_id: str) -> str:
     if action == "write":
         return (
             "【下一步·write】发文/视频已齐。"
-            "请立即在对话中一次输出八章公开资料核查报告（以文首标题或「一、基本情况」起笔）。"
-            "禁止 write_file / web_search / 发文补采；禁止再拆六专题；禁止结束会话、禁止 done。"
+            "请立即一次输出八章公开资料核查报告（以文首标题或「一、基本情况」起笔）。"
+            "禁止再拆六专题；禁止结束会话、禁止 done。"
         )
     if action == "hold":
         try:
@@ -771,20 +771,11 @@ def build_continue_message(kind: str, task_id: str) -> str:
                 return "【系统续跑·禁止结束会话】" + s8_hint
         except Exception:
             pass
-        msg = (
+        return (
             "【系统续跑·禁止结束会话】发文/视频已齐。"
             "请立即一次输出八章公开资料核查报告（文首标题或「一、基本情况」起笔）。"
-            "禁止再调任何工具；禁止再拆六专题；禁止等待句、禁止 done。"
+            "禁止再拆六专题；禁止等待句、禁止 done。"
         )
-        try:
-            from report_04.engine import build_report_materials_pack
-
-            pack = build_report_materials_pack(task_id, max_chars=4500)
-            if pack:
-                msg = msg + "\n\n" + pack
-        except Exception:
-            pass
-        return msg
     return (
         "【系统续跑·禁止结束会话】系统正在推进流程。"
         "禁止写「等待系统」并结束。无工具可调则保持会话。"
@@ -1136,20 +1127,13 @@ def _analysis_still_open(task_id: str) -> bool:
 
 
 def _recent_tool_activity(task_id: str, *, within_sec: float = 45.0) -> bool:
-    """近期有实质工具活动 → Agent 仍在干活，勿因 session_end 叠催。
-
-    写报期 duration_ms=0 的门禁拦截不算干活（否则连撞工具会永久挡住催写续跑）。
-    """
+    """近期有工具成功/失败输出 → Agent 仍在干活，勿因 session_end 叠催。"""
     try:
         row = db.fetch_one(
             """
-            SELECT TIMESTAMPDIFF(SECOND, MAX(executed_at), NOW(3)) AS age_sec
+            SELECT TIMESTAMPDIFF(SECOND, MAX(created_at), NOW(3)) AS age_sec
             FROM hermes_tool_outputs
             WHERE task_id=%s
-              AND NOT (
-                    status='error'
-                AND IFNULL(duration_ms, 0) <= 0
-              )
             """,
             (task_id,),
         )

@@ -2864,35 +2864,6 @@ def _on_post_tool(payload: Dict[str, Any]) -> None:
         if tool_call_id:
             _SEEN_TOOL_CALLS.add(tool_call_id)
         logger.info("门禁拦截仅审计不推进 task=%s tool=%s", task_id, tool_name)
-        # 写报期连撞工具：累计后催一次带材料包的 analysis 续跑，避免空转十几分钟
-        try:
-            from report_04.orchestrator import infer_gate_step
-            from report_04.video_report import can_write_report_after_videos
-
-            if (
-                infer_gate_step(task_id) == "step7_report"
-                and can_write_report_after_videos(task_id).get("ok")
-            ):
-                from report_04.session_continue import (
-                    _payload,
-                    _write_payload,
-                    maybe_continue_agent_session,
-                )
-
-                p = _payload(task_id)
-                n = int(p.get("report_phase_tool_blocks") or 0) + 1
-                p["report_phase_tool_blocks"] = n
-                _write_payload(store, task_id, p)
-                if n in {2, 4, 6}:
-                    maybe_continue_agent_session(
-                        store,
-                        task_id,
-                        reason=f"report_tool_block_x{n}",
-                        kind="analysis",
-                        force=False,
-                    )
-        except Exception as exc:
-            logger.warning("写报期工具连撞催续失败 task=%s: %s", task_id, exc)
         return
 
     input_accounts = store.get_seed_accounts(task_id)
@@ -3689,8 +3660,8 @@ def _on_post_llm_call(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     else:
                         followup_ctx = build_post_llm_followup(task_id) + (
                             "\n【写报硬约束】发文已齐。禁止再复述步骤5/6/4.3/7。"
-                            "请立即在对话中一次输出八章公开资料核查报告（文首标题或「一、基本情况」起笔）。"
-                            "禁止 write_file / web_search / 发文补采；禁止调用 vision；禁止 done。"
+                            "请立即一次输出八章公开资料核查报告（文首标题或「一、基本情况」起笔）。"
+                            "禁止调用 vision；禁止 done。"
                         )
                     maybe_continue_agent_session(
                         store,

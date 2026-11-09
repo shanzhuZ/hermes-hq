@@ -150,10 +150,9 @@ def infer_gate_step(task_id: str) -> str:
         except Exception:
             report_ok = False
         if not report_ok:
-            # 等视频/发文齐：停在发文，勿进空白名单的 step7_report（否则模型只能空撞工具）
             if ANALYSIS_STEP_KEYS:
                 return ANALYSIS_STEP_KEYS[-1]
-            return "step5_posts"
+            return "step7_report"
         s11 = get_step_status(task_id, "step7_report")
         if s11 not in {"completed", "skipped"}:
             return "step7_report"
@@ -202,26 +201,13 @@ def infer_gate_step(task_id: str) -> str:
 
 
 def _allow_late_step5_post_collect(task_id: str, tool_name: str, phase: Optional[str]) -> bool:
-    """步骤7 父节点已 completed 后允许补采发文（只入库，编排层禁止回开父节点）。
-
-    写报门禁已开且 step7_report 已 running 时不再放行：避免「边写报边补采」空转。
-    """
+    """步骤7 父节点已 completed 后允许补采发文（只入库，编排层禁止回开父节点）。"""
     from report_04.gates import report_prerequisites_ready
 
     if not report_prerequisites_ready(task_id):
         return False
     if get_step_status(task_id, "step5_posts") not in {"completed", "skipped"}:
         return False
-    try:
-        from report_04.video_report import can_write_report_after_videos
-
-        if (
-            get_step_status(task_id, "step7_report") == "running"
-            and can_write_report_after_videos(task_id).get("ok")
-        ):
-            return False
-    except Exception:
-        pass
     ph = str(phase or "")
     if tool_name in POST_TOOLS:
         return True
@@ -268,36 +254,8 @@ def block_tool_reason(
             "step3_identity": "请输出认定结论；候选主页用 MCP/Apify，禁止 shell。",
             "step4_osint_web": "请用 web_search/web_extract/browser_*。",
             "step5_posts": "请调用发文类 MCP/Apify 工具。",
-            "step7_report": "请直接在对话输出八章终稿，禁止 shell。",
         }.get(gate, "请按当前步骤白名单调用 MCP/Apify，禁止 terminal/curl。")
         return f"写报编排禁止调用 terminal（当前 {gate}）。{tip}"
-
-    # 写报门禁已开：硬禁一切工具，逼模型直接出八章正文（禁止 write_file 旁路）
-    # 拦截回包必须附材料包：否则模型会连撞工具空转十几分钟（见 494a step7≈807s）
-    gate_early = infer_gate_step(task_id)
-    if gate_early == "step7_report":
-        try:
-            from report_04.video_report import can_write_report_after_videos
-
-            if can_write_report_after_videos(task_id).get("ok"):
-                msg = (
-                    f"当前已进入写报（step7_report），禁止调用 {tool_name}。"
-                    "请立刻在对话中一次输出八章公开资料核查报告"
-                    "（以「# {姓名} 公开资料核查报告」或「一、基本情况」起笔）。"
-                    "禁止 write_file / web_search / web_extract / 发文 / 主页采集；"
-                    "下一回合只许输出报告正文，禁止再调任何工具；缺项写「未核实」。"
-                )
-                try:
-                    from report_04.engine import build_report_materials_pack
-
-                    pack = build_report_materials_pack(task_id, max_chars=2800)
-                    if pack:
-                        msg = msg + "\n\n" + pack
-                except Exception:
-                    pass
-                return msg
-        except Exception:
-            pass
 
     # Maigret：仅步骤2；step0 / 认定后 / 已 skip 一律禁止
     if tool_name.startswith("mcp_maigret_"):
@@ -602,24 +560,11 @@ def _advance_to_analysis_phase_body(
             from report_04.phases import PHASE_REPORT
 
             store.set_task_phase(task_id, PHASE_REPORT)
-            write_ok = False
-            try:
-                from report_04.video_report import can_write_report_after_videos
-
-                write_ok = bool(can_write_report_after_videos(task_id).get("ok"))
-            except Exception:
-                write_ok = False
-            if write_ok and get_step_status(task_id, "step7_report") == "pending":
+            if get_step_status(task_id, "step7_report") == "pending":
                 store.set_step_status(
                     task_id, "step7_report", "running", message="撰写八章核查报告…"
                 )
                 changed = True
-            elif not write_ok:
-                logger.info(
-                    "暂缓点亮 step7_report：发文/视频未齐 task=%s reason=%s",
-                    task_id,
-                    reason[:80],
-                )
     except Exception as exc:
         logger.warning("set_task_phase report/analysis 失败 task=%s: %s", task_id, exc)
     try:

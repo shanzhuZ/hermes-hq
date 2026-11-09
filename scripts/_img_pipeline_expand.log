@@ -1,0 +1,676 @@
+2026-11-09 18:28:21,761 [INFO] image_pipeline.discover: discover task=c41f7786-487d-4ea3-845f-7692d668bebf images=247
+2026-11-09 18:31:00,507 [INFO] image_pipeline.hbase_store: local image exists, skip write: img:c41f7786-487d-4ea3-845f-7692d668bebf:0791580480a63588
+2026-11-09 18:31:02,777 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:5c34cdea9aacf41d table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:02,895 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:5c34cdea9aacf41d
+2026-11-09 18:31:02,898 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:5c34cdea9aacf41d dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:05,121 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:763b7c1a6ddbc2a8 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:05,260 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:763b7c1a6ddbc2a8
+2026-11-09 18:31:05,262 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:763b7c1a6ddbc2a8 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:07,386 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6875aa9326f5ac1c table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:07,507 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6875aa9326f5ac1c
+2026-11-09 18:31:07,509 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6875aa9326f5ac1c dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:09,450 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:69850103eeaacaef table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:09,568 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:69850103eeaacaef
+2026-11-09 18:31:09,571 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:69850103eeaacaef dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:11,522 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:4f66e6ff319a53dc table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:11,644 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:4f66e6ff319a53dc
+2026-11-09 18:31:11,647 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:4f66e6ff319a53dc dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:13,719 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:c5de9335178ea9c5 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:13,844 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:c5de9335178ea9c5
+2026-11-09 18:31:13,852 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:c5de9335178ea9c5 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:15,933 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:db888a1d51dfd68e table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:16,066 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:db888a1d51dfd68e
+2026-11-09 18:31:16,072 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:db888a1d51dfd68e dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:18,110 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:065a8bb8e888df33 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:18,231 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:065a8bb8e888df33
+2026-11-09 18:31:18,234 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:065a8bb8e888df33 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:20,419 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:7d625f55603d65f4 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:20,543 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:7d625f55603d65f4
+2026-11-09 18:31:20,551 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:7d625f55603d65f4 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:22,683 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:bbe3dc42efeda2a9 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:22,805 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:bbe3dc42efeda2a9
+2026-11-09 18:31:22,807 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:bbe3dc42efeda2a9 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:24,767 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:b234c7131e875d0a table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:24,898 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:b234c7131e875d0a
+2026-11-09 18:31:24,902 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:b234c7131e875d0a dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:26,970 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:399d1122767bc248 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:27,088 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:399d1122767bc248
+2026-11-09 18:31:27,092 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:399d1122767bc248 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:29,290 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:0d1a7930d3bafc12 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:29,411 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:0d1a7930d3bafc12
+2026-11-09 18:31:29,414 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:0d1a7930d3bafc12 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:31,552 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:44bad300b0017c26 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:31,678 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:44bad300b0017c26
+2026-11-09 18:31:31,680 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:44bad300b0017c26 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:33,920 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:27d715381e054cc5 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:34,041 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:27d715381e054cc5
+2026-11-09 18:31:34,044 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:27d715381e054cc5 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:36,094 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6797160874772eb5 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:36,216 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6797160874772eb5
+2026-11-09 18:31:36,222 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6797160874772eb5 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:38,378 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:632470bb8465cccb table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:38,501 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:632470bb8465cccb
+2026-11-09 18:31:38,507 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:632470bb8465cccb dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:40,676 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:f023a9ce3f820338 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:40,799 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:f023a9ce3f820338
+2026-11-09 18:31:40,801 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:f023a9ce3f820338 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:42,817 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:1cced5654ac2544a table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:42,938 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:1cced5654ac2544a
+2026-11-09 18:31:42,940 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:1cced5654ac2544a dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:45,267 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:b2feeb60e35fd402 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:45,391 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:b2feeb60e35fd402
+2026-11-09 18:31:45,394 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:b2feeb60e35fd402 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:47,711 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:77c5efa3a5697800 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:47,870 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:77c5efa3a5697800
+2026-11-09 18:31:47,873 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:77c5efa3a5697800 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:50,860 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:ab8c0d74d639ddd1 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:51,060 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:ab8c0d74d639ddd1
+2026-11-09 18:31:51,063 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:ab8c0d74d639ddd1 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:53,087 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:35cf996202d762b7 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:53,208 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:35cf996202d762b7
+2026-11-09 18:31:53,211 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:35cf996202d762b7 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:55,729 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:73638ec2b1b0319c table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:55,849 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:73638ec2b1b0319c
+2026-11-09 18:31:55,852 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:73638ec2b1b0319c dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:31:58,241 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6787f0889ad2c0f1 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:31:58,363 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6787f0889ad2c0f1
+2026-11-09 18:31:58,365 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6787f0889ad2c0f1 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:00,909 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2b4da55a03489693 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:01,032 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2b4da55a03489693
+2026-11-09 18:32:01,035 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2b4da55a03489693 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:03,595 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:1daf834d4d8b0ee7 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:03,720 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:1daf834d4d8b0ee7
+2026-11-09 18:32:03,722 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:1daf834d4d8b0ee7 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:05,935 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:1efe5eef08702962 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:06,054 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:1efe5eef08702962
+2026-11-09 18:32:06,056 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:1efe5eef08702962 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:08,231 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:db8d782f10fd5455 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:08,352 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:db8d782f10fd5455
+2026-11-09 18:32:08,354 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:db8d782f10fd5455 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:10,456 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2f5aaae9477fda5b table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:10,577 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2f5aaae9477fda5b
+2026-11-09 18:32:10,578 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2f5aaae9477fda5b dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:12,669 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6c452513f940b0e5 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:12,792 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6c452513f940b0e5
+2026-11-09 18:32:12,794 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6c452513f940b0e5 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:15,070 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:7b8d5058c576aa3f table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:15,191 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:7b8d5058c576aa3f
+2026-11-09 18:32:15,194 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:7b8d5058c576aa3f dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:17,690 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:87d1c3eb37900cb4 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:17,814 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:87d1c3eb37900cb4
+2026-11-09 18:32:17,818 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:87d1c3eb37900cb4 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:20,030 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:1b603c338c951b27 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:20,150 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:1b603c338c951b27
+2026-11-09 18:32:20,152 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:1b603c338c951b27 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:22,391 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:cc6e79bbb6a98382 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:22,517 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:cc6e79bbb6a98382
+2026-11-09 18:32:22,525 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:cc6e79bbb6a98382 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:24,674 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:62ab351d31e1c180 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:24,898 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:62ab351d31e1c180
+2026-11-09 18:32:24,905 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:62ab351d31e1c180 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:27,198 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6b6f44b1e964123a table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:27,321 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6b6f44b1e964123a
+2026-11-09 18:32:27,323 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:6b6f44b1e964123a dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:29,290 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:e3b113114e1a87a2 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:29,407 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:e3b113114e1a87a2
+2026-11-09 18:32:29,410 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:e3b113114e1a87a2 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:31,537 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:3bdb0290a32a4d30 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:33,117 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:3bdb0290a32a4d30
+2026-11-09 18:32:33,129 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:3bdb0290a32a4d30 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:35,397 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:5bd943db91a2190d table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:35,777 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:5bd943db91a2190d
+2026-11-09 18:32:35,779 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:5bd943db91a2190d dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:39,104 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:3bcda3c417e4e58d table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:39,288 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:3bcda3c417e4e58d
+2026-11-09 18:32:39,291 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:3bcda3c417e4e58d dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:43,067 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:9b77ee2ad163231c table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:43,188 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:9b77ee2ad163231c
+2026-11-09 18:32:43,191 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:9b77ee2ad163231c dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:45,669 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:19a9007d79795abf table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:45,790 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:19a9007d79795abf
+2026-11-09 18:32:45,792 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:19a9007d79795abf dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:49,078 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2d955ff71d42323a table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:49,204 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2d955ff71d42323a
+2026-11-09 18:32:49,206 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2d955ff71d42323a dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:52,309 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:a0be3333cb4a4ed1 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:52,443 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:a0be3333cb4a4ed1
+2026-11-09 18:32:52,446 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:a0be3333cb4a4ed1 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:32:58,056 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2c0485e2fdfd9845 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:32:58,180 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2c0485e2fdfd9845
+2026-11-09 18:32:58,183 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2c0485e2fdfd9845 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:33:00,534 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:07d5af5aa73ced8c table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:33:00,654 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:07d5af5aa73ced8c
+2026-11-09 18:33:00,656 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:07d5af5aa73ced8c dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:33:03,672 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:da5f0635558bf135 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:33:03,802 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:da5f0635558bf135
+2026-11-09 18:33:03,805 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:da5f0635558bf135 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:33:06,235 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:eac1d15329cf1244 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:33:06,354 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:eac1d15329cf1244
+2026-11-09 18:33:06,356 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:eac1d15329cf1244 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:33:08,420 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:127379ff471b3642 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:33:08,539 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:127379ff471b3642
+2026-11-09 18:33:08,541 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:127379ff471b3642 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:33:10,658 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:3e87a38dc29487c7 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:33:10,780 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:3e87a38dc29487c7
+2026-11-09 18:33:10,782 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:3e87a38dc29487c7 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:33:13,016 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:af4d6bba373337d7 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:33:13,135 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:af4d6bba373337d7
+2026-11-09 18:33:13,137 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:af4d6bba373337d7 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:33:15,324 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:212ca6c41c39ea87 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:33:15,442 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:212ca6c41c39ea87
+2026-11-09 18:33:15,445 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:212ca6c41c39ea87 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:33:17,529 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2f1a44374b291df7 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:33:17,652 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2f1a44374b291df7
+2026-11-09 18:33:17,654 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:2f1a44374b291df7 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:33:19,765 [INFO] image_pipeline.hbase_store: HBase HTTP 写入成功 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:18b503d730d16b92 table=collect_image_bytes resp={"code":200,"message":"success","data":null,"id":null}
+2026-11-09 18:33:19,885 [WARNING] image_pipeline.hbase_store: HBase HTTP 写入返回成功但 getHbaseData 读不到数据，将依赖本地回退 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:18b503d730d16b92
+2026-11-09 18:33:19,887 [INFO] image_pipeline.hbase_store: 本地回退已写入 row_key=img:c41f7786-487d-4ea3-845f-7692d668bebf:18b503d730d16b92 dir=D:\hermes-hq\data\image_bytes http_ok=False
+2026-11-09 18:33:24,887 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:33:28,114 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.23s
+2026-11-09 18:33:29,429 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:33:32,926 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.5s
+2026-11-09 18:33:34,185 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:33:37,818 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.63s
+2026-11-09 18:33:39,199 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:33:43,546 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.35s
+2026-11-09 18:33:44,895 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:33:50,157 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.26s
+2026-11-09 18:33:51,647 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:33:57,083 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.44s
+2026-11-09 18:33:58,421 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:34:03,236 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.82s
+2026-11-09 18:34:04,582 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:34:10,871 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.29s
+2026-11-09 18:34:12,516 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:34:18,858 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.34s
+2026-11-09 18:34:20,206 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:34:26,879 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.67s
+2026-11-09 18:34:28,318 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:34:34,078 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.76s
+2026-11-09 18:34:35,614 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:34:39,450 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.84s
+2026-11-09 18:34:40,761 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:34:45,822 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.06s
+2026-11-09 18:34:47,261 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:34:54,134 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.87s
+2026-11-09 18:34:55,441 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:34:58,589 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.15s
+2026-11-09 18:35:00,123 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:35:04,488 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.37s
+2026-11-09 18:35:05,890 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:35:11,448 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.56s
+2026-11-09 18:35:12,843 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:35:18,918 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.08s
+2026-11-09 18:35:20,254 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:35:25,760 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.51s
+2026-11-09 18:35:27,039 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:35:32,760 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.72s
+2026-11-09 18:35:34,085 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:35:40,449 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.36s
+2026-11-09 18:35:41,861 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:35:47,518 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.66s
+2026-11-09 18:35:48,863 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:35:54,838 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.97s
+2026-11-09 18:35:56,230 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:36:01,089 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.86s
+2026-11-09 18:36:02,371 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:36:07,043 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.67s
+2026-11-09 18:36:08,445 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:36:13,566 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.12s
+2026-11-09 18:36:14,855 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:36:19,504 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.65s
+2026-11-09 18:36:20,918 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:36:24,135 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.22s
+2026-11-09 18:36:25,372 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:36:29,945 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.57s
+2026-11-09 18:36:31,262 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:36:36,132 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.87s
+2026-11-09 18:36:37,585 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:36:40,823 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.24s
+2026-11-09 18:36:42,129 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:36:47,535 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.41s
+2026-11-09 18:36:49,096 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:36:55,903 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.81s
+2026-11-09 18:36:57,244 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:37:02,414 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.17s
+2026-11-09 18:37:03,830 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:37:07,937 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.11s
+2026-11-09 18:37:09,212 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:37:12,761 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.55s
+2026-11-09 18:37:14,196 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:37:18,761 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.56s
+2026-11-09 18:37:20,098 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:37:24,539 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.44s
+2026-11-09 18:37:25,951 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:37:31,132 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.18s
+2026-11-09 18:37:32,506 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:37:39,162 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.66s
+2026-11-09 18:37:40,461 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:37:46,322 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.86s
+2026-11-09 18:37:47,655 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:37:53,282 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.63s
+2026-11-09 18:37:54,613 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:37:59,271 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.66s
+2026-11-09 18:38:00,566 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:38:05,216 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.65s
+2026-11-09 18:38:06,518 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:38:11,413 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.89s
+2026-11-09 18:38:12,899 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:38:18,243 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.34s
+2026-11-09 18:38:19,548 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:38:24,583 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.04s
+2026-11-09 18:38:25,898 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:38:31,971 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.07s
+2026-11-09 18:38:33,337 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:38:37,365 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.03s
+2026-11-09 18:38:38,966 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:38:43,549 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.58s
+2026-11-09 18:38:45,016 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:38:48,707 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.69s
+2026-11-09 18:38:49,991 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:38:54,856 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.86s
+2026-11-09 18:38:56,212 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:39:01,606 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.39s
+2026-11-09 18:39:02,933 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:39:07,353 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.42s
+2026-11-09 18:39:08,706 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:39:13,488 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.78s
+2026-11-09 18:39:14,856 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:39:21,413 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.56s
+2026-11-09 18:39:22,700 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:39:26,639 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.94s
+2026-11-09 18:39:27,999 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:39:47,018 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=19.02s
+2026-11-09 18:39:48,311 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:39:54,323 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.01s
+2026-11-09 18:39:55,700 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:39:59,702 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.0s
+2026-11-09 18:40:00,993 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:40:06,220 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.23s
+2026-11-09 18:40:07,489 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:40:11,925 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.44s
+2026-11-09 18:40:13,220 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:40:17,778 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.56s
+2026-11-09 18:40:19,116 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:40:23,346 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.23s
+2026-11-09 18:40:24,708 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:40:28,930 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.22s
+2026-11-09 18:40:30,259 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:40:36,878 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.62s
+2026-11-09 18:40:38,223 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:40:43,160 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.94s
+2026-11-09 18:40:44,502 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:40:49,807 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.31s
+2026-11-09 18:40:51,166 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:40:55,239 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.07s
+2026-11-09 18:40:56,520 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:41:01,485 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.96s
+2026-11-09 18:41:02,740 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:41:07,976 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.24s
+2026-11-09 18:41:09,275 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:41:18,115 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=8.84s
+2026-11-09 18:41:19,385 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:41:27,232 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=7.85s
+2026-11-09 18:41:28,505 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:41:35,067 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.56s
+2026-11-09 18:41:36,390 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:41:42,868 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.48s
+2026-11-09 18:41:44,120 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:41:49,046 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.93s
+2026-11-09 18:41:50,329 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:41:55,708 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.38s
+2026-11-09 18:41:57,011 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:42:03,359 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.35s
+2026-11-09 18:42:04,714 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:42:10,777 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.06s
+2026-11-09 18:42:12,085 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:42:17,936 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.85s
+2026-11-09 18:42:19,235 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:42:24,855 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.62s
+2026-11-09 18:42:26,163 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:42:29,524 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.36s
+2026-11-09 18:42:30,796 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:42:36,787 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.99s
+2026-11-09 18:42:38,063 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:42:43,948 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.89s
+2026-11-09 18:42:45,232 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:42:49,443 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.21s
+2026-11-09 18:42:50,817 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:42:55,267 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.45s
+2026-11-09 18:42:56,604 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:43:03,477 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.87s
+2026-11-09 18:43:04,783 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:43:08,068 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.28s
+2026-11-09 18:43:09,450 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:43:13,926 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.48s
+2026-11-09 18:43:15,295 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:43:19,457 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.16s
+2026-11-09 18:43:20,733 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:43:25,697 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.96s
+2026-11-09 18:43:26,996 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:43:32,035 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.04s
+2026-11-09 18:43:33,321 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:43:38,752 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.43s
+2026-11-09 18:43:40,061 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:43:45,019 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.96s
+2026-11-09 18:43:46,313 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:43:51,819 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.51s
+2026-11-09 18:43:53,109 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:43:59,357 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.25s
+2026-11-09 18:44:00,671 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:44:07,666 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.99s
+2026-11-09 18:44:08,950 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:44:15,395 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.45s
+2026-11-09 18:44:16,717 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:44:21,202 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.49s
+2026-11-09 18:44:22,610 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:44:28,922 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.31s
+2026-11-09 18:44:30,278 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:44:33,956 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.68s
+2026-11-09 18:44:35,208 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:44:39,079 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.87s
+2026-11-09 18:44:40,390 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:44:46,586 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.2s
+2026-11-09 18:44:47,859 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:44:53,969 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.11s
+2026-11-09 18:44:55,328 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:45:01,389 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.06s
+2026-11-09 18:45:02,673 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:45:08,566 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.89s
+2026-11-09 18:45:09,832 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:45:13,476 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.64s
+2026-11-09 18:45:14,791 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:45:19,168 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.38s
+2026-11-09 18:45:20,459 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:45:24,954 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.5s
+2026-11-09 18:45:26,238 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:45:30,456 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.22s
+2026-11-09 18:45:31,730 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:45:36,381 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.65s
+2026-11-09 18:45:37,740 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:45:43,219 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.48s
+2026-11-09 18:45:44,520 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:45:49,487 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.97s
+2026-11-09 18:45:50,819 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:45:55,729 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.91s
+2026-11-09 18:45:57,063 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:46:03,297 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.23s
+2026-11-09 18:46:04,579 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:46:08,044 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.46s
+2026-11-09 18:46:09,358 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:46:14,477 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.12s
+2026-11-09 18:46:15,830 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:46:20,289 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.46s
+2026-11-09 18:46:21,678 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:46:26,321 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.64s
+2026-11-09 18:46:27,599 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:46:31,368 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.77s
+2026-11-09 18:46:32,710 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:46:39,198 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.49s
+2026-11-09 18:46:40,533 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:46:46,603 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.07s
+2026-11-09 18:46:47,884 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:46:54,537 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.65s
+2026-11-09 18:46:55,818 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:47:02,524 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.71s
+2026-11-09 18:47:03,831 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:47:08,286 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.45s
+2026-11-09 18:47:09,776 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:47:14,232 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.46s
+2026-11-09 18:47:16,030 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:47:20,149 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.12s
+2026-11-09 18:47:21,700 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:47:26,045 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.35s
+2026-11-09 18:47:27,596 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:47:31,938 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.34s
+2026-11-09 18:47:33,217 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:47:39,007 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.79s
+2026-11-09 18:47:40,610 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:47:44,685 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.07s
+2026-11-09 18:47:46,001 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:47:51,770 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.77s
+2026-11-09 18:47:53,227 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:47:58,237 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.01s
+2026-11-09 18:47:59,596 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:48:05,212 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.62s
+2026-11-09 18:48:06,558 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:48:11,819 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.26s
+2026-11-09 18:48:13,571 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:48:18,873 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.3s
+2026-11-09 18:48:20,167 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:48:25,946 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.78s
+2026-11-09 18:48:27,260 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:48:31,044 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.78s
+2026-11-09 18:48:32,323 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:48:36,754 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.43s
+2026-11-09 18:48:38,012 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:48:41,695 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.68s
+2026-11-09 18:48:42,949 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:48:48,014 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.07s
+2026-11-09 18:48:49,291 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:48:53,687 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.4s
+2026-11-09 18:48:54,997 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:48:59,580 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.58s
+2026-11-09 18:49:00,845 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:49:05,925 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.08s
+2026-11-09 18:49:07,191 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:49:12,692 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.5s
+2026-11-09 18:49:13,964 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:49:18,096 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.13s
+2026-11-09 18:49:19,406 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:49:24,052 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.65s
+2026-11-09 18:49:25,362 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:49:29,611 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.25s
+2026-11-09 18:49:30,884 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:49:35,942 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.06s
+2026-11-09 18:49:37,216 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:49:42,780 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.56s
+2026-11-09 18:49:44,083 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:49:50,071 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.99s
+2026-11-09 18:49:51,516 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:49:56,038 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.52s
+2026-11-09 18:49:57,420 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:50:02,660 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.24s
+2026-11-09 18:50:03,947 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:50:09,152 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.2s
+2026-11-09 18:50:10,503 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:50:15,218 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.72s
+2026-11-09 18:50:16,535 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:50:20,758 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.22s
+2026-11-09 18:50:22,030 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:50:26,342 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.31s
+2026-11-09 18:50:27,678 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:50:32,052 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.37s
+2026-11-09 18:50:33,324 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:50:37,912 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.59s
+2026-11-09 18:50:39,237 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:50:44,809 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.57s
+2026-11-09 18:50:46,109 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:50:51,438 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.33s
+2026-11-09 18:50:52,986 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:50:57,769 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.78s
+2026-11-09 18:50:59,186 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:51:04,182 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.0s
+2026-11-09 18:51:05,466 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:51:12,983 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=7.52s
+2026-11-09 18:51:14,287 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:51:20,197 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.91s
+2026-11-09 18:51:21,499 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:51:25,528 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.03s
+2026-11-09 18:51:26,814 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:51:31,196 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.38s
+2026-11-09 18:51:32,479 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:51:36,105 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.63s
+2026-11-09 18:51:37,373 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:51:41,058 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.68s
+2026-11-09 18:51:42,366 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:51:47,676 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.31s
+2026-11-09 18:51:48,963 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:51:54,313 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.35s
+2026-11-09 18:51:55,619 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:52:01,148 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.53s
+2026-11-09 18:52:02,428 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:52:07,600 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.17s
+2026-11-09 18:52:08,879 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:52:13,324 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.45s
+2026-11-09 18:52:14,921 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:52:21,064 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.14s
+2026-11-09 18:52:22,414 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:52:26,942 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.53s
+2026-11-09 18:52:28,202 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:52:31,471 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.27s
+2026-11-09 18:52:32,761 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:52:35,788 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.03s
+2026-11-09 18:52:37,077 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:52:42,088 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.01s
+2026-11-09 18:52:43,441 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:52:47,863 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.42s
+2026-11-09 18:52:49,144 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:52:53,494 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.35s
+2026-11-09 18:52:54,826 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:53:00,636 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.81s
+2026-11-09 18:53:01,932 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:53:06,546 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.61s
+2026-11-09 18:53:07,830 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:53:13,756 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.93s
+2026-11-09 18:53:15,174 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:53:20,144 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.97s
+2026-11-09 18:53:21,623 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:53:26,102 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.48s
+2026-11-09 18:53:27,441 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:53:32,830 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.39s
+2026-11-09 18:53:34,082 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:53:40,264 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.18s
+2026-11-09 18:53:41,528 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:53:46,515 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.99s
+2026-11-09 18:53:47,795 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:53:52,940 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.15s
+2026-11-09 18:53:54,266 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:53:59,718 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.45s
+2026-11-09 18:54:01,145 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:54:07,098 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.95s
+2026-11-09 18:54:08,490 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:54:13,136 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.65s
+2026-11-09 18:54:14,475 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:54:20,222 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.75s
+2026-11-09 18:54:21,553 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:54:26,172 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.62s
+2026-11-09 18:54:28,080 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:54:33,101 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.02s
+2026-11-09 18:54:34,807 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:54:40,897 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.09s
+2026-11-09 18:54:42,303 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:54:46,628 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.32s
+2026-11-09 18:54:47,934 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:54:52,593 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.66s
+2026-11-09 18:54:54,004 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:54:59,024 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.02s
+2026-11-09 18:55:00,468 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:55:04,406 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.94s
+2026-11-09 18:55:05,717 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:55:11,686 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.97s
+2026-11-09 18:55:13,059 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:55:19,341 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.28s
+2026-11-09 18:55:20,711 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:55:25,715 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.0s
+2026-11-09 18:55:27,052 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:55:34,197 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=7.14s
+2026-11-09 18:55:35,809 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:55:41,021 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.21s
+2026-11-09 18:55:42,469 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:55:47,243 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.77s
+2026-11-09 18:55:48,529 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:55:54,931 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.4s
+2026-11-09 18:55:56,333 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:56:02,093 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.76s
+2026-11-09 18:56:03,772 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:56:10,039 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.27s
+2026-11-09 18:56:11,552 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:56:16,533 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.98s
+2026-11-09 18:56:17,787 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:56:22,137 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.35s
+2026-11-09 18:56:23,409 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:56:27,869 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.46s
+2026-11-09 18:56:29,148 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:56:34,273 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.13s
+2026-11-09 18:56:35,604 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:56:41,777 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.17s
+2026-11-09 18:56:43,314 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:56:48,428 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.12s
+2026-11-09 18:56:50,302 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:56:54,701 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.4s
+2026-11-09 18:56:56,030 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:57:01,755 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.73s
+2026-11-09 18:57:03,400 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:57:09,421 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.02s
+2026-11-09 18:57:10,801 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:57:18,030 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=7.23s
+2026-11-09 18:57:19,339 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:57:23,829 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.49s
+2026-11-09 18:57:25,136 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:57:30,444 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.31s
+2026-11-09 18:57:31,896 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:57:37,479 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.58s
+2026-11-09 18:57:38,790 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:57:44,761 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.97s
+2026-11-09 18:57:47,081 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:57:52,662 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.58s
+2026-11-09 18:57:53,946 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:57:59,434 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.49s
+2026-11-09 18:58:00,999 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:58:06,239 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.24s
+2026-11-09 18:58:07,674 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:58:11,898 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.22s
+2026-11-09 18:58:13,188 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:58:17,298 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.11s
+2026-11-09 18:58:18,600 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:58:22,909 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.31s
+2026-11-09 18:58:24,263 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:58:28,257 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.99s
+2026-11-09 18:58:29,630 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:58:34,536 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.91s
+2026-11-09 18:58:35,840 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:58:40,841 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.0s
+2026-11-09 18:58:42,170 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:58:48,002 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.83s
+2026-11-09 18:58:49,577 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:58:55,624 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.05s
+2026-11-09 18:58:56,924 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:59:02,241 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.32s
+2026-11-09 18:59:03,977 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:59:12,128 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=8.15s
+2026-11-09 18:59:13,611 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:59:18,971 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.36s
+2026-11-09 18:59:20,388 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:59:24,364 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.98s
+2026-11-09 18:59:25,797 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:59:30,896 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.1s
+2026-11-09 18:59:32,344 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:59:36,327 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=3.98s
+2026-11-09 18:59:38,231 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:59:44,479 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=6.25s
+2026-11-09 18:59:46,278 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:59:51,029 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.75s
+2026-11-09 18:59:52,609 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 18:59:57,710 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=5.1s
+2026-11-09 18:59:59,901 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 19:00:03,964 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.06s
+2026-11-09 19:00:05,593 [INFO] image_pipeline.proxy_http: HTTP POST via clash
+2026-11-09 19:00:09,907 [INFO] image_pipeline.vlm: 图片 VLM 分析成功 latency=4.31s
+{
+  "ok": true,
+  "taskId": "c41f7786-487d-4ea3-845f-7692d668bebf",
+  "discovered": 247,
+  "cappedTo": null,
+  "upserted": 247,
+  "sourceType": null,
+  "stored": 247,
+  "storageFailed": 0,
+  "storageSkipped": 191,
+  "failedSkipped": 0,
+  "analyzed": 247,
+  "analyzeSkipped": 0,
+  "analyzeFailed": 0,
+  "profileImages": 3,
+  "postImages": 244
+}

@@ -664,6 +664,7 @@ class TaskStore:
             from report_04.report_parser import (
                 extract_report_body,
                 extract_report_tags,
+                format_report_markdown_hierarchy,
                 sanitize_report_dirty_meta,
             )
             from report_04.video_report import (
@@ -688,6 +689,8 @@ class TaskStore:
                 return False
             raw_body = sanitize_report_dirty_meta(extract_report_body(text))
             final_body, report_tags = extract_report_tags(raw_body)
+            # 章标题升为 ##、七/八章序号化，便于前端 Markdown 放大加粗与分点阅读
+            final_body = format_report_markdown_hierarchy(final_body)
             text = inject_video_into_report(final_body, task_id)
         clipped = text[:65535]
         tags_json = (

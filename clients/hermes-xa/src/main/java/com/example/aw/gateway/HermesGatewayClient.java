@@ -32,7 +32,7 @@ public class HermesGatewayClient {
 
     private static final Logger log = LoggerFactory.getLogger(HermesGatewayClient.class);
 
-    private final String baseUrl = "http://127.0.0.1:8642";
+    private final String baseUrl = "http://127.0.0.1:8643";
     private final String apiKey =
             "dc9b5db558aa4844d0a29d79deb296b75aba58a670c79ecff3ed922839b2c86b";
 

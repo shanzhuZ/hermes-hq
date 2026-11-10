@@ -200,6 +200,143 @@ def prepare_final_report_body(content: str) -> str:
     return sanitize_report_dirty_meta(extract_report_body(content))
 
 
+_CHAPTER_LINE_RE = re.compile(
+    r"^(#{1,6}\s*)?([一二三四五六七八]、[^\n]+)\s*$",
+    re.M,
+)
+_SUBSECTION_LINE_RE = re.compile(
+    r"^(#{1,6}\s*)?(（[一二三四五六七八九十]+）[^\n]+)\s*$",
+    re.M,
+)
+_SECTION7_LABELS = ("身份核验", "账号认定", "综合结论")
+_SECTION7_SPLIT_RE = re.compile(
+    r"(?=身份核验\s*[：:]|账号认定\s*[：:]|综合结论\s*[：:])"
+)
+_SECTION7_ITEM_RE = re.compile(
+    r"^(身份核验|账号认定|综合结论)\s*[：:]\s*([\s\S]*)$"
+)
+_ORDERED_ITEM_RE = re.compile(r"^\s*\d+[\.、]\s+")
+_BULLET_ITEM_RE = re.compile(r"^\s*[-*•]\s+")
+
+
+def _promote_heading_levels(text: str) -> str:
+    """一～八章升为 ##，（一）（二）升为 ###，便于前端 Markdown 放大加粗。"""
+
+    def _chapter(m: re.Match) -> str:
+        return "## " + m.group(2).strip()
+
+    def _sub(m: re.Match) -> str:
+        return "### " + m.group(2).strip()
+
+    out = _CHAPTER_LINE_RE.sub(_chapter, text or "")
+    out = _SUBSECTION_LINE_RE.sub(_sub, out)
+    return out
+
+
+def _format_section7_body(body: str) -> str:
+    """第七章：把「身份核验/账号认定/综合结论」拆成 1. 2. 3. 列表。"""
+    raw = (body or "").strip()
+    if not raw:
+        return raw
+    # 已是规范序号且含标签，不强制重排
+    if _ORDERED_ITEM_RE.search(raw) and all(x in raw for x in _SECTION7_LABELS):
+        return raw
+    parts = [p.strip() for p in _SECTION7_SPLIT_RE.split(raw) if p and p.strip()]
+    items: List[str] = []
+    for part in parts:
+        m = _SECTION7_ITEM_RE.match(part)
+        if m:
+            label, content = m.group(1), (m.group(2) or "").strip()
+            content = re.sub(r"\s+", " ", content).strip(" ；;。")
+            if content:
+                items.append(f"{len(items) + 1}. **{label}**：{content}")
+            else:
+                items.append(f"{len(items) + 1}. **{label}**：未核实")
+        elif part:
+            # 无标签的残留段：并入列表末项或作为补充点
+            chunk = re.sub(r"\s+", " ", part).strip()
+            if chunk:
+                items.append(f"{len(items) + 1}. {chunk}")
+    if len(items) >= 2:
+        return "\n".join(items)
+    # 整段无标签：按句号粗拆（至少 2 句才拆）
+    sentences = [s.strip() for s in re.split(r"(?<=[。！？])\s*", raw) if s.strip()]
+    if len(sentences) >= 2:
+        return "\n".join(f"{i}. {s}" for i, s in enumerate(sentences, 1))
+    return raw
+
+
+def _format_section8_body(body: str) -> str:
+    """第八章：来源统一为 1. 2. 3. 有序列表。"""
+    raw = (body or "").strip()
+    if not raw:
+        return raw
+    lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+    items: List[str] = []
+    for ln in lines:
+        ln = _ORDERED_ITEM_RE.sub("", ln)
+        ln = _BULLET_ITEM_RE.sub("", ln)
+        ln = ln.strip()
+        if ln:
+            items.append(f"{len(items) + 1}. {ln}")
+    return "\n".join(items) if items else raw
+
+
+def _replace_section_body(text: str, section_head: str, next_heads: tuple, formatter) -> str:
+    """替换某一章标题后、下一章标题前的正文。"""
+    raw = text or ""
+    # 允许已有 ## 前缀
+    pat = re.compile(
+        rf"(^|\n)(#{{1,6}}\s*)?({re.escape(section_head)})\s*\n",
+        re.M,
+    )
+    m = pat.search(raw)
+    if not m:
+        return raw
+    start = m.end()
+    end = len(raw)
+    for nh in next_heads:
+        npat = re.compile(
+            rf"(^|\n)(#{{1,6}}\s*)?({re.escape(nh)})\s*(\n|$)",
+            re.M,
+        )
+        nm = npat.search(raw, start)
+        if nm:
+            end = nm.start()
+            break
+    old_body = raw[start:end]
+    new_body = formatter(old_body)
+    if new_body.strip() == old_body.strip():
+        return raw
+    # 保留章节后空行观感
+    return raw[:start] + new_body.strip() + "\n" + raw[end:].lstrip("\n")
+
+
+def format_report_markdown_hierarchy(content: str) -> str:
+    """终稿展示格式：章标题 ##、小节 ###、七/八章正文序号化。
+
+    不改变章节名称与验收关键字，仅调整 Markdown 层级与列表形态。
+    """
+    text = (content or "").strip()
+    if not text:
+        return text
+    text = _promote_heading_levels(text)
+    text = _replace_section_body(
+        text,
+        "七、身份核验与综合结论",
+        ("八、主要来源",),
+        _format_section7_body,
+    )
+    text = _replace_section_body(
+        text,
+        "八、主要来源",
+        ("[报告标签]",),
+        _format_section8_body,
+    )
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text
+
+
 def _parse_report_tag_chunk(chunk: str) -> List[str]:
     """把标签块正文拆成去重列表（最多 12 项，单项 ≤32 字）。"""
     tags: List[str] = []

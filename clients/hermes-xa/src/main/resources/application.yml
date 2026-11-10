@@ -1,5 +1,5 @@
 server:
-  port: 4377
+  port: 4378
   #171服务器
   #port: 8035
   tomcat:

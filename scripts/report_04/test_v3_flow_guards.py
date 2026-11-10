@@ -288,6 +288,44 @@ class V3FlowGuardTest(unittest.TestCase):
             report_parser.is_final_report(self._current_template_report())
         )
 
+    def test_format_report_markdown_hierarchy_promotes_headings_and_lists(self):
+        raw = (
+            "测试人物 公开资料核查报告\n"
+            "一、基本情况\n人物介绍。\n"
+            "（一）教育经历\n未核实。\n"
+            "七、身份核验与综合结论\n"
+            "身份核验：姓名与职务锚点一致。"
+            "账号认定：领英主页已核验。"
+            "综合结论：公开身份总体可信。\n"
+            "八、主要来源\n"
+            "- 官方教职员页 https://example.com/a\n"
+            "- 领英主页 https://linkedin.com/in/x\n"
+            "论文条目 Foo et al.\n"
+        )
+        out = report_parser.format_report_markdown_hierarchy(raw)
+        self.assertIn("## 一、基本情况", out)
+        self.assertIn("### （一）教育经历", out)
+        self.assertIn("## 七、身份核验与综合结论", out)
+        self.assertIn("1. **身份核验**：", out)
+        self.assertIn("2. **账号认定**：", out)
+        self.assertIn("3. **综合结论**：", out)
+        self.assertIn("## 八、主要来源", out)
+        self.assertIn("1. 官方教职员页", out)
+        self.assertIn("2. 领英主页", out)
+        self.assertIn("3. 论文条目", out)
+        # 格式化后仍应能通过终稿验收关键字
+        formatted_full = self._current_template_report().replace(
+            "七、身份核验与综合结论\n身份核验结论。\n"
+            "八、主要来源\n1. 官方来源 https://example.com\n",
+            "七、身份核验与综合结论\n"
+            "身份核验：锚点一致。账号认定：社交已核。综合结论：可信。\n"
+            "八、主要来源\n"
+            "- 官方来源 https://example.com\n"
+            "- 第二来源 https://example.org\n",
+        )
+        pretty = report_parser.format_report_markdown_hierarchy(formatted_full)
+        self.assertTrue(report_parser.is_final_report(pretty))
+
     def test_current_docx_report_missing_fixed_item_is_rejected(self):
         # soft 收口：单缺「经济状况」仍可过；大面积缺二级项才拒收
         thin = (
